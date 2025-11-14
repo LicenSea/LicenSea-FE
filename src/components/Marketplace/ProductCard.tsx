@@ -1,33 +1,31 @@
-import { Heart, Star, ShoppingCart } from "lucide-react";
+import { Heart, Eye, Copy } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Card, CardContent } from "../ui/card";
 import { useState } from "react";
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  originalPrice?: number;
-  rating: number;
-  reviewCount: number;
-  image: string;
-  isNew?: boolean;
-  isSale?: boolean;
-  salePercentage?: number;
-}
+import type { Work } from "@/types/work";
+import { categories } from "@/data";
+import { useNavigate } from "react-router";
 
 interface ProductCardProps {
-  product: Product;
-  onAddToCart?: (productId: string) => void;
+  product: Work;
+  onViewDetails?: (productId: string) => void;
   onWishlistToggle?: (productId: string) => void;
 }
 
+// 주소를 축약해서 표시하는 함수
+const shortenAddress = (address: string, start = 6, end = 4): string => {
+  if (address.length <= start + end) return address;
+  return `${address.slice(0, start)}...${address.slice(-end)}`;
+};
+
 export function ProductCard({
   product,
-  onAddToCart,
+  onViewDetails,
   onWishlistToggle,
 }: ProductCardProps) {
+  const nav = useNavigate();
+
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -36,41 +34,58 @@ export function ProductCard({
     onWishlistToggle?.(product.id);
   };
 
-  const handleAddToCart = () => {
-    onAddToCart?.(product.id);
+  const handleViewDetails = () => {
+    onViewDetails?.(product.id);
   };
+
+  const categoryLabel =
+    categories.find((c) => c.id === product.metadata.category)?.label ||
+    product.metadata.category;
+  const hasLicense = product.licenseOption !== null;
+  const isDerivative = product.parentId !== null && product.parentId.length > 0;
 
   return (
     <Card
-      className={`group relative overflow-hidden transition-all duration-300 hover:shadow-lg ${
-        isHovered ? "scale-[1.02]" : ""
-      }`}
+      className={`py-0 rounded-sm relative overflow-hidden transition-all duration-300 hover:shadow-lg`}
+      // className={`py-0 rounded-sm group relative overflow-hidden transition-all duration-300 hover:shadow-lg ${
+      //   isHovered ? "scale-[1.01]" : ""
+      // }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={() => nav(`/work/${product.id}`)}
     >
       <CardContent className="p-0">
         {/* Image Container */}
-        <div className="relative aspect-[3/4] overflow-hidden">
-          <img
-            src={product.image}
-            alt={product.name}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
+        <div className="relative aspect-1 overflow-hidden">
+          {product.blob_uri ? (
+            <img
+              src={product.blob_uri}
+              alt={product.metadata.title}
+              className={`w-full h-60 object-cover transition-transform duration-300${
+                product.metadata.isAdult ? " blur-md" : ""
+              }`}
+            />
+          ) : (
+            <div className="w-full h-60 bg-black" />
+          )}
 
-          {/* Badges */}
-          <div className="absolute top-2 left-2 flex flex-col gap-1">
-            {product.isNew && (
-              <Badge variant="secondary" className="bg-green-500 text-white">
-                NEW
-              </Badge>
-            )}
-            {product.isSale && (
-              <Badge variant="destructive">-{product.salePercentage}%</Badge>
+          {/* 왼쪽 상단 */}
+          <div className="absolute top-4 left-4 flex gap-2">
+            {isDerivative ? (
+              <Badge variant="secondary">Derivative</Badge>
+            ) : (
+              <>
+                <Badge variant="secondary">
+                  Origin{" "}
+                  {product.derivativeCount &&
+                    `- ${product.derivativeCount} Derivatives`}
+                </Badge>
+              </>
             )}
           </div>
 
           {/* Wishlist Button */}
-          <Button
+          {/* <Button
             variant="ghost"
             size="sm"
             className={`absolute top-2 right-2 h-8 w-8 p-0 transition-all duration-200 ${
@@ -83,53 +98,91 @@ export function ProductCard({
             <Heart
               className={`h-4 w-4 ${isWishlisted ? "fill-current" : ""}`}
             />
-          </Button>
+          </Button> */}
 
-          {/* Add to Cart Button - Shows on hover */}
-          <div
-            className={`absolute bottom-2 left-2 right-2 transition-all duration-300 ${
-              isHovered
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-2"
-            }`}
-          >
-            <Button onClick={handleAddToCart} className="w-full" size="sm">
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              Add to Cart
-            </Button>
+          {/* 오른쪽 상단 */}
+          <div className="absolute top-4 right-4 flex gap-2">
+            {product.metadata.isAdult && (
+              <Badge variant="destructive">18+</Badge>
+            )}
           </div>
         </div>
 
         {/* Product Info */}
         <div className="p-4">
-          <h3 className="font-medium mb-2 line-clamp-2">{product.name}</h3>
+          <h3 className="font-semibold mb-2 line-clamp-2">
+            {product.metadata.title}
+          </h3>
 
-          {/* Rating */}
-          <div className="flex items-center gap-1 mb-2">
-            <div className="flex">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className={`h-3 w-3 ${
-                    i < Math.floor(product.rating)
-                      ? "text-yellow-400 fill-current"
-                      : "text-gray-300"
-                  }`}
-                />
-              ))}
+          {/* Creator */}
+          <div className="flex items-center gap-2 mb-4">
+            {/* <span className="text-xs text-muted-foreground">by</span> */}
+            <div className="flex items-center gap-1">
+              <span className="text-xs font-mono">
+                {shortenAddress(product.creator)}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-4 w-4 p-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(product.creator);
+                }}
+                title="Copy address"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
             </div>
-            <span className="text-sm text-muted-foreground">
-              ({product.reviewCount})
-            </span>
           </div>
 
-          {/* Price */}
-          <div className="flex items-center gap-2">
-            <span className="font-bold">${product.price}</span>
-            {product.originalPrice && (
-              <span className="text-sm text-muted-foreground line-through">
-                ${product.originalPrice}
+          {/* Category and Tags */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <Badge className="text-xs">{categoryLabel}</Badge>
+            {product.metadata.tags.slice(0, 2).map((tag) => (
+              <Badge key={tag} variant="outline" className="text-xs">
+                {tag}
+              </Badge>
+            ))}
+            {product.metadata.tags.length > 2 && (
+              <span className="text-xs text-muted-foreground">
+                +{product.metadata.tags.length - 2}
               </span>
+            )}
+          </div>
+
+          {/* Description */}
+          {product.metadata.description && (
+            <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+              {product.metadata.description}
+            </p>
+          )}
+
+          {/* Stats and Price */}
+          <div className="font-galmuri flex items-center justify-between mt-3 pt-3 gap-2">
+            {/* VIEW button */}
+            <Button className="flex-1" variant="outline" type="button">
+              <span>
+                VIEW {product.fee > 0 ? `${product.fee} SUI` : "FREE"}
+              </span>
+            </Button>
+
+            {/* BUY LICENSE NFT button */}
+            {hasLicense && (
+              <Button
+                variant="outline"
+                className="flex-1 relative group bg-[#ffcccc] hover:bg-[#ffcccc]/70"
+                type="button"
+              >
+                <span className="group-hover:opacity-0 group-hover:invisible transition-opacity duration-150">
+                  BUY LICENSE NFT
+                </span>
+                <span className="absolute left-0 w-full flex justify-center items-center top-0 h-full opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-150">
+                  {product.licenseOption?.price !== undefined
+                    ? `${product.licenseOption.price} ETH`
+                    : ""}
+                </span>
+              </Button>
             )}
           </div>
         </div>
