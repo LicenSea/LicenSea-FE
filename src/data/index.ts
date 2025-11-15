@@ -18,6 +18,8 @@ export const mockWorks: Work[] = [
     creator:
       "0xded158cc74a375be0a0e4506d18801bb2355abb38a7d0b4168452a20a32b96d9",
     parentId: null,
+    preview_uri:
+      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=500&fit=crop",
     blob_uri:
       "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=500&fit=crop",
     metadata: {
@@ -43,6 +45,8 @@ export const mockWorks: Work[] = [
     creator:
       "0xded158cc74a375be0a0e4506d18801bb2355abb38a7d0b4168452a20a32b96d9",
     parentId: ["1"],
+    preview_uri:
+      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=500&fit=crop",
     blob_uri:
       "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=500&fit=crop",
     metadata: {

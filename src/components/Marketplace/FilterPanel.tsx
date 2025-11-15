@@ -360,7 +360,7 @@ export function FilterPanel({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">License Options</label>
+              <label className="text-sm font-medium">License Option</label>
               <div className="flex gap-2">
                 <Button
                   variant={
@@ -375,7 +375,7 @@ export function FilterPanel({
                 >
                   All
                 </Button>
-                <Button
+                {/* <Button
                   variant={
                     filters.hasLicenseOptions === false ? "default" : "outline"
                   }
@@ -383,8 +383,8 @@ export function FilterPanel({
                   onClick={() => handleHasLicenseOptionsChange(false)}
                   className="flex-1"
                 >
-                  No License
-                </Button>
+                  Not for Sale
+                </Button> */}
                 <Button
                   variant={
                     filters.hasLicenseOptions === true ? "default" : "outline"
@@ -393,7 +393,7 @@ export function FilterPanel({
                   onClick={() => handleHasLicenseOptionsChange(true)}
                   className="flex-1"
                 >
-                  Has License
+                  License for Sale
                 </Button>
               </div>
             </div>

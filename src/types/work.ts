@@ -9,6 +9,7 @@ export type Work = {
   id: string;
   creator: string; // address
   parentId: string[] | null;
+  preview_uri?: string;
   blob_uri: string;
   metadata: {
     title: string;

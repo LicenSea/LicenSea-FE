@@ -57,16 +57,18 @@ export function ProductCard({
       <CardContent className="p-0">
         {/* Image Container */}
         <div className="relative aspect-1 overflow-hidden">
-          {product.blob_uri ? (
+          {product.preview_uri ? (
             <img
-              src={product.blob_uri}
+              src={product.preview_uri}
               alt={product.metadata.title}
               className={`w-full h-60 object-cover transition-transform duration-300${
                 product.metadata.isAdult ? " blur-md" : ""
               }`}
             />
           ) : (
-            <div className="w-full h-60 bg-black" />
+            <div className="w-full h-60 bg-black flex justify-center items-center text-white">
+              No Preview Available
+            </div>
           )}
 
           {/* 왼쪽 상단 */}
