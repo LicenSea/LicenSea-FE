@@ -23,6 +23,7 @@ import {
   uploadToWalrus,
   walrusServices,
   setSelectedWalrusService,
+  createWorkObjectTx,
 } from "../lib/encrypt-upload";
 import { categories } from "@/data";
 import { useSuiClient, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
@@ -32,7 +33,14 @@ import { Transaction } from "@mysten/sui/transactions";
 const Upload = () => {
   const suiClient = useSuiClient();
   const packageId = useNetworkVariable("packageId"); // 이 훅이 있다고 가정
-  const { mutate: signAndExecute } = useSignAndExecuteTransaction();
+  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction({
+    execute: async ({ bytes, signature }) =>
+      await suiClient.executeTransactionBlock({
+        transactionBlock: bytes,
+        signature,
+        options: { showRawEffects: true, showObjectChanges: true },
+      }),
+  });
 
   const [isUploading, setIsUploading] = useState(false);
   const [isDraggingThumbnail, setIsDraggingThumbnail] = useState(false);
@@ -53,7 +61,7 @@ const Upload = () => {
     viewType: "free" as "free" | "paid",
     fee: "",
     hasLicenseOption: false,
-    licenseOptions: [] as LicenseOption[],
+    licenseOption: null as LicenseOption | null,
     isAdult: false,
   });
   const [selectedWalrus, setSelectedWalrus] = useState(walrusServices[0].id);
@@ -238,29 +246,63 @@ const Upload = () => {
       return;
     }
 
+    if (formData.hasLicenseOption) {
+      formData.licenseOption = {
+        rule: licenseForm.rule,
+        price: Number(licenseForm.price),
+        royaltyRatio: Number(licenseForm.royaltyRatio),
+      };
+    }
+
     setIsUploading(true);
 
-    // TODO: 실제 환경에 맞는 Seal 정책 객체 ID와 Cap ID로 교체해야 합니다.
-    const policyObject =
-      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    const capId =
-      "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-    const moduleName = "licensea"; // TODO: 실제 모듈 이름으로 교체
+    const moduleName = "work";
 
     try {
-      // 1. Seal을 사용하여 원본 파일 암호화
-      console.log("Encrypting original file...");
+      // --- 1. create Work without originalFile ---
+      console.log("Step 1: Creating initial Work object...");
+      const createTx = createWorkObjectTx(packageId, moduleName, formData);
+
+      const createResult = await signAndExecute({ transaction: createTx });
+      console.log("Work creation transaction successful:", createResult);
+
+      // extract workObjectId and capId from transaction result
+      const createdObjects = createResult.objectChanges?.filter(
+        (change) => change.type === "created"
+      );
+      if (!createdObjects || createdObjects.length < 2) {
+        throw new Error("Failed to create Work and Cap objects.");
+      }
+      const workObjectId = createdObjects.find((c) =>
+        c.objectType.endsWith("::work::Work")
+      )?.objectId;
+      const capId = createdObjects.find((c) =>
+        c.objectType.endsWith("::work::Cap")
+      )?.objectId;
+
+      if (!workObjectId || !capId) {
+        throw new Error("Could not find Work or Cap ID in transaction result.");
+      }
+      console.log(`Work object created: ${workObjectId}`);
+      console.log(`Cap object created: ${capId}`);
+
+      // --- 2. encrypt & upload originalFile to Walrus ---
+      console.log("Step 2: Encrypting and uploading file...");
+      console.log("original file:", formData.originalFile);
       const encryptedData = await sealEncrypt(
         suiClient,
         formData.originalFile,
         packageId,
-        policyObject
+        workObjectId
       );
       console.log("Encryption complete.");
+      console.log("Encrypted data:", encryptedData);
 
-      // 2. 암호화된 파일을 Walrus에 업로드하고 blob ID 받기
       console.log("Uploading to Walrus...");
-      // Walrus 응답에서 blobId 추출
+      // ===============Need to check=============
+      const walrusResponse = await uploadToWalrus(encryptedData);
+
+      // Walrus 응답에서 blobId 추출 (응답 구조에 따라 달라질 수 있음)
       let blobId;
       if (walrusResponse?.info?.newlyCreated?.blobObject?.blobId) {
         blobId = walrusResponse.info.newlyCreated.blobObject.blobId;
@@ -271,32 +313,23 @@ const Upload = () => {
       }
       console.log("Upload complete. Blob ID:", blobId);
 
-      // 3. 받아온 blobId와 나머지 formData를 사용하여 체인에 업로드
-      console.log("Creating Sui transaction...");
-      const tx = new Transaction();
-      tx.moveCall({
-        target: `${packageId}::${moduleName}::publish`, // 실제 컨트랙트 타겟으로 수정
-        arguments: [
-          tx.object(policyObject),
-          tx.object(capId),
-          tx.pure.string(blobId),
-        ],
-      });
-
-      signAndExecute(
-        { transaction: tx },
-        {
-          onSuccess: (result) => {
-            console.log("Transaction successful:", result);
-            alert(`Successfully published on Sui! Digest: ${result.digest}`);
-          },
-          onError: (error) => {
-            throw new Error(`Sui transaction failed: ${error.message}`);
-          },
-        }
+      // --- 3단계: Work 객체에 blobId 연결 ---
+      console.log("Step 3: Associating blobId to Work object...");
+      const associateTx = associateBlobIdTx(
+        packageId,
+        moduleName,
+        workObjectId,
+        capId,
+        blobId
       );
+
+      const associateResult = await signAndExecute({
+        transaction: associateTx,
+      });
+      console.log("Association successful:", associateResult);
+      alert(`Upload process complete! Digest: ${associateResult.digest}`);
     } catch (error) {
-      console.error("Upload failed:", error);
+      console.error("Upload process failed:", error);
       alert(
         `An error occurred: ${
           error instanceof Error ? error.message : "Unknown error"

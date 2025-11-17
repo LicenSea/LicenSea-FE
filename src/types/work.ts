@@ -1,5 +1,4 @@
 export type LicenseOption = {
-  work_id: string;
   rule: string; // e.g. only use for Fanart
   price: number;
   royaltyRatio: number; // ex: 20 (내가 20, 라이센스 구매자가 80)

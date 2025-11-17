@@ -1,13 +1,50 @@
 import { SealClient } from "@mysten/seal";
 import { SuiClient } from "@mysten/sui/client";
 import { fromHex, toHex } from "@mysten/sui/utils";
+import { Transaction } from "@mysten/sui/transactions";
+
+export const createWorkObjectTx = (
+  packageId: string,
+  moduleName: string,
+  formData: any
+): Transaction => {
+  const tx = new Transaction();
+
+  tx.moveCall({
+    target: `${packageId}::${moduleName}::create_work_entry`,
+    arguments: [
+      // metadata field
+      tx.pure.string(formData.title),
+      tx.pure.string(formData.description),
+      tx.pure.string(formData.originalFile?.type || ""), // file_type
+      tx.pure.u64(formData.originalFile?.size || 0), // file_size
+      tx.pure.vector("string", formData.tags), // tags
+      tx.pure.string(formData.category), // category
+
+      // licenseOptions field
+      tx.pure.string(formData.licenseOption?.rule || ""), // rule
+      tx.pure.u64(Number(formData.licenseOption?.price || 0) * 1_000_000_000), // price (SUI to MIST)
+      tx.pure.u64(formData.licenseOption?.royaltyRatio || 0), // royaltyRatio
+
+      // other fields
+      tx.pure.vector("address", formData.originWorks), // parentId
+
+      // fee (작품 보기 수수료)
+      tx.pure.u64(
+        (formData.viewType === "paid" ? Number(formData.fee) : 0) *
+          1_000_000_000
+      ), // fee (SUI to MIST)
+    ],
+  });
+  return tx;
+};
 
 // Walrus 서비스 목록 (실제 운영 URL로 교체해야 합니다)
 export const walrusServices = [
   {
     id: "service1",
     name: "walrus.space",
-    // 예시: 실제 서비스의 프록시 또는 직접 URL을 사용해야 합니다.
+
     publisherUrl: "https://walrus.space",
   },
   {
@@ -15,7 +52,6 @@ export const walrusServices = [
     name: "staketab.org",
     publisherUrl: "https://sui.staketab.org/walrus",
   },
-  // 다른 서비스들도 실제 URL로 추가...
 ];
 
 // 현재 선택된 Walrus 서비스 ID (여기서는 기본값으로 설정)
@@ -29,17 +65,11 @@ export const setSelectedWalrusService = (serviceId: string) => {
   selectedServiceId = serviceId;
 };
 
-/**
- * Walrus Publisher URL을 가져옵니다.
- * @param path - 요청 경로
- * @returns 전체 Publisher URL
- */
 const getPublisherUrl = (path: string): string => {
   const service = walrusServices.find((s) => s.id === selectedServiceId);
   if (!service) {
     throw new Error(`Walrus service with id "${selectedServiceId}" not found.`);
   }
-  // URL 끝에 슬래시가 중복되지 않도록 정리
   const cleanPath = path.startsWith("/") ? path.substring(1) : path;
   const baseUrl = service.publisherUrl.endsWith("/")
     ? service.publisherUrl
