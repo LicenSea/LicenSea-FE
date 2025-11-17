@@ -12,10 +12,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { LicenseOption } from "@/types/work";
-import { Upload as UploadIcon, Image as ImageIcon, X } from "lucide-react";
+import {
+  Upload as UploadIcon,
+  Image as ImageIcon,
+  X,
+  Loader2,
+} from "lucide-react";
+import {
+  sealEncrypt,
+  uploadToWalrus,
+  walrusServices,
+  setSelectedWalrusService,
+} from "../lib/encrypt-upload";
 import { categories } from "@/data";
+import { useSuiClient, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
+import { useNetworkVariable } from "../networkConfig";
+import { Transaction } from "@mysten/sui/transactions";
 
 const Upload = () => {
+  const suiClient = useSuiClient();
+  const packageId = useNetworkVariable("packageId"); // 이 훅이 있다고 가정
+  const { mutate: signAndExecute } = useSignAndExecuteTransaction();
+
+  const [isUploading, setIsUploading] = useState(false);
   const [isDraggingThumbnail, setIsDraggingThumbnail] = useState(false);
   const [isDraggingOriginal, setIsDraggingOriginal] = useState(false);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
@@ -37,6 +56,7 @@ const Upload = () => {
     licenseOptions: [] as LicenseOption[],
     isAdult: false,
   });
+  const [selectedWalrus, setSelectedWalrus] = useState(walrusServices[0].id);
 
   // TODO: 나중에 API로 licenseNFT 목록 불러오기
   const [availableLicenseNFTs, setAvailableLicenseNFTs] = useState<
@@ -213,8 +233,78 @@ const Upload = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.originalFile) {
+      alert("Original file is required.");
+      return;
+    }
 
-    // TODO: seal -> walrus -> chain upload
+    setIsUploading(true);
+
+    // TODO: 실제 환경에 맞는 Seal 정책 객체 ID와 Cap ID로 교체해야 합니다.
+    const policyObject =
+      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const capId =
+      "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const moduleName = "licensea"; // TODO: 실제 모듈 이름으로 교체
+
+    try {
+      // 1. Seal을 사용하여 원본 파일 암호화
+      console.log("Encrypting original file...");
+      const encryptedData = await sealEncrypt(
+        suiClient,
+        formData.originalFile,
+        packageId,
+        policyObject
+      );
+      console.log("Encryption complete.");
+
+      // 2. 암호화된 파일을 Walrus에 업로드하고 blob ID 받기
+      console.log("Uploading to Walrus...");
+      // Walrus 응답에서 blobId 추출
+      let blobId;
+      if (walrusResponse?.info?.newlyCreated?.blobObject?.blobId) {
+        blobId = walrusResponse.info.newlyCreated.blobObject.blobId;
+      } else if (walrusResponse?.info?.alreadyCertified?.blobId) {
+        blobId = walrusResponse.info.alreadyCertified.blobId;
+      } else {
+        throw new Error("Could not extract blobId from Walrus response.");
+      }
+      console.log("Upload complete. Blob ID:", blobId);
+
+      // 3. 받아온 blobId와 나머지 formData를 사용하여 체인에 업로드
+      console.log("Creating Sui transaction...");
+      const tx = new Transaction();
+      tx.moveCall({
+        target: `${packageId}::${moduleName}::publish`, // 실제 컨트랙트 타겟으로 수정
+        arguments: [
+          tx.object(policyObject),
+          tx.object(capId),
+          tx.pure.string(blobId),
+        ],
+      });
+
+      signAndExecute(
+        { transaction: tx },
+        {
+          onSuccess: (result) => {
+            console.log("Transaction successful:", result);
+            alert(`Successfully published on Sui! Digest: ${result.digest}`);
+          },
+          onError: (error) => {
+            throw new Error(`Sui transaction failed: ${error.message}`);
+          },
+        }
+      );
+    } catch (error) {
+      console.error("Upload failed:", error);
+      alert(
+        `An error occurred: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const renderStepContent = () => {
@@ -769,11 +859,18 @@ const Upload = () => {
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 rounded-md"
               disabled={
                 !formData.originalFile ||
-                !formData.title ||
-                !formData.description
+                !formData.title.trim() ||
+                !formData.description.trim() ||
+                isUploading
               }
             >
-              START UPLOAD
+              {isUploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> UPLOADING...
+                </>
+              ) : (
+                "START UPLOAD"
+              )}
             </Button>
           </form>
         </div>

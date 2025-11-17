@@ -1,0 +1,126 @@
+import { SealClient } from "@mysten/seal";
+import { SuiClient } from "@mysten/sui/client";
+import { fromHex, toHex } from "@mysten/sui/utils";
+
+// Walrus 서비스 목록 (실제 운영 URL로 교체해야 합니다)
+export const walrusServices = [
+  {
+    id: "service1",
+    name: "walrus.space",
+    // 예시: 실제 서비스의 프록시 또는 직접 URL을 사용해야 합니다.
+    publisherUrl: "https://walrus.space",
+  },
+  {
+    id: "service2",
+    name: "staketab.org",
+    publisherUrl: "https://sui.staketab.org/walrus",
+  },
+  // 다른 서비스들도 실제 URL로 추가...
+];
+
+// 현재 선택된 Walrus 서비스 ID (여기서는 기본값으로 설정)
+let selectedServiceId = "service1";
+
+/**
+ * 사용할 Walrus 서비스를 설정합니다.
+ * @param serviceId - 사용할 서비스의 ID
+ */
+export const setSelectedWalrusService = (serviceId: string) => {
+  selectedServiceId = serviceId;
+};
+
+/**
+ * Walrus Publisher URL을 가져옵니다.
+ * @param path - 요청 경로
+ * @returns 전체 Publisher URL
+ */
+const getPublisherUrl = (path: string): string => {
+  const service = walrusServices.find((s) => s.id === selectedServiceId);
+  if (!service) {
+    throw new Error(`Walrus service with id "${selectedServiceId}" not found.`);
+  }
+  // URL 끝에 슬래시가 중복되지 않도록 정리
+  const cleanPath = path.startsWith("/") ? path.substring(1) : path;
+  const baseUrl = service.publisherUrl.endsWith("/")
+    ? service.publisherUrl
+    : `${service.publisherUrl}/`;
+  return `${baseUrl}${cleanPath}`;
+};
+
+/**
+ * 파일을 Seal을 사용하여 암호화합니다.
+ * @param suiClient - SuiClient 인스턴스
+ * @param file - 암호화할 파일
+ * @param packageId - Sui 패키지 ID
+ * @param policyObject - Seal 정책 객체 ID
+ * @returns 암호화된 데이터 (Uint8Array)
+ */
+export const sealEncrypt = async (
+  suiClient: SuiClient,
+  file: File,
+  packageId: string,
+  policyObject: string
+): Promise<Uint8Array> => {
+  // TODO: 실제 환경에 맞는 서버 객체 ID로 교체해야 합니다.
+  const serverObjectIds = [
+    "0x73d05d62c18d9374e3ea529e8e0ed6161da1a141a94d3f76ae3fe4e99356db75",
+    "0xf5d14a81a982144ae441cd7d64b09027f116a468bd36e7eca494f750591623c8",
+  ];
+
+  const client = new SealClient({
+    suiClient,
+    serverConfigs: serverObjectIds.map((id) => ({
+      objectId: id,
+      weight: 1,
+    })),
+    verifyKeyServers: false,
+  });
+
+  // 파일을 ArrayBuffer로 변환
+  const fileBuffer = await file.arrayBuffer();
+
+  // 암호화에 사용할 고유 ID 생성
+  const nonce = crypto.getRandomValues(new Uint8Array(5));
+  const policyObjectBytes = fromHex(policyObject);
+  const id = toHex(new Uint8Array([...policyObjectBytes, ...nonce]));
+
+  // 파일 암호화
+  const { encryptedObject: encryptedBytes } = await client.encrypt({
+    threshold: 2, // TODO: 필요에 따라 임계값 조정
+    packageId,
+    id,
+    data: new Uint8Array(fileBuffer),
+  });
+
+  return encryptedBytes;
+};
+
+/**
+ * 암호화된 파일을 Walrus에 업로드합니다.
+ * @param encryptedData - 암호화된 데이터 (Uint8Array)
+ * @returns Walrus 업로드 결과 (blob ID 포함)
+ */
+export const uploadToWalrus = async (
+  encryptedData: Uint8Array
+): Promise<any> => {
+  const NUM_EPOCH = 1; // TODO: 저장 기간(epoch) 설정
+  const response = await fetch(
+    getPublisherUrl(`/v1/blobs?epochs=${NUM_EPOCH}`),
+    {
+      method: "PUT",
+      body: encryptedData,
+      headers: {
+        "Content-Type": "application/octet-stream",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Error publishing the blob on Walrus: ${response.status} ${errorText}`
+    );
+  }
+
+  return response.json();
+};
