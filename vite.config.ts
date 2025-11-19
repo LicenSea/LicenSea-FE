@@ -11,4 +11,18 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      "/api/walrus": {
+        target: "https://walrus.space",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/walrus/, ""),
+      },
+      "/api/staketab": {
+        target: "https://sui.staketab.org",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/staketab/, ""),
+      },
+    },
+  },
 });

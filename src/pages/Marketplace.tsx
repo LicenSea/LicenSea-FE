@@ -12,6 +12,8 @@ import { Navbar } from "@/components/Navbar/Navbar";
 import { mockWorks } from "@/data";
 import type { FilterOptions } from "@/types/work";
 
+import lineageImg from "@/assets/lineage.png";
+
 export function Marketplace() {
   const [filters, setFilters] = useState<FilterOptions>({
     categories: [],
@@ -107,7 +109,15 @@ export function Marketplace() {
   return (
     <div className="min-w-screen min-h-screen">
       <Navbar />
-      <div className="w-full mt-20 h-80 bg-black" />
+      <div
+        className="w-full mt-20 h-40 bg-black"
+        style={{
+          backgroundImage: `url(${lineageImg})`,
+          backgroundRepeat: "repeat-x",
+          backgroundPositionX: "center",
+          backgroundSize: "contain",
+        }}
+      />
 
       <div className="container mx-auto px-4 py-8">
         <div className="flex gap-6">

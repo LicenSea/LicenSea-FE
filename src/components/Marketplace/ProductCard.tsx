@@ -62,7 +62,8 @@ export function ProductCard({
               src={product.preview_uri}
               alt={product.metadata.title}
               className={`w-full h-60 object-cover transition-transform duration-300${
-                product.metadata.isAdult ? " blur-md" : ""
+                // product.metadata.isAdult ? " blur-md" : ""
+                product.metadata.isAdult ? " " : ""
               }`}
             />
           ) : (
@@ -104,9 +105,9 @@ export function ProductCard({
 
           {/* 오른쪽 상단 */}
           <div className="absolute top-4 right-4 flex gap-2">
-            {product.metadata.isAdult && (
+            {/* {product.metadata.isAdult && (
               <Badge variant="destructive">18+</Badge>
-            )}
+            )} */}
           </div>
         </div>
 
@@ -170,7 +171,7 @@ export function ProductCard({
             </Button>
 
             {/* BUY LICENSE NFT button */}
-            {hasLicense && (
+            {/* {hasLicense && (
               <Button
                 variant="outline"
                 className="flex-1 relative group bg-[#ffcccc] hover:bg-[#ffcccc]/70"
@@ -181,11 +182,11 @@ export function ProductCard({
                 </span>
                 <span className="absolute left-0 w-full flex justify-center items-center top-0 h-full opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-150">
                   {product.licenseOption?.price !== undefined
-                    ? `${product.licenseOption.price} ETH`
+                    ? `${product.licenseOption.price} SUI`
                     : ""}
                 </span>
               </Button>
-            )}
+            )} */}
           </div>
         </div>
       </CardContent>

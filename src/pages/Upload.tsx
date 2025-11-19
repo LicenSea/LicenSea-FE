@@ -871,7 +871,7 @@ const Upload = () => {
             </div>
 
             {/* Adult content verification */}
-            <div className="flex items-center gap-3">
+            {/* <div className="flex items-center gap-3">
               <Label htmlFor="adult-content" className="text-sm font-medium">
                 Is this work intended for adults (18+)?
               </Label>
@@ -883,7 +883,7 @@ const Upload = () => {
                 }
               />
               <span className="text-sm">Yes</span>
-            </div>
+            </div> */}
 
             {/* 제출 버튼 */}
             <Button

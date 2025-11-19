@@ -96,7 +96,7 @@ export function HowItWorks() {
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-[#a3f9d8] animate-pulse" />
               <span className="text-[#262d5c]/80">Royalties earned:</span>
-              <span className="text-[#262d5c] font-semibold">2.34 ETH</span>
+              <span className="text-[#262d5c] font-semibold">2.34 SUI</span>
             </div>
             <div className="w-px h-6 bg-[#262d5c]/30" />
             <div className="flex items-center gap-2">
