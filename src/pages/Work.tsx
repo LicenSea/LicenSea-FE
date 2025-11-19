@@ -169,34 +169,6 @@ const Work = () => {
               </div>
             </div>
 
-            {/* License Option Info */}
-            {work.licenseOption && (
-              <div className="border rounded-lg p-4 bg-muted/50">
-                <h3 className="font-semibold mb-2">License Option</h3>
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Rule: </span>
-                    <span>{work.licenseOption.rule}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Price: </span>
-                    <span className="font-medium">
-                      {work.licenseOption.price} ETH
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">
-                      Royalty Ratio:{" "}
-                    </span>
-                    <span>
-                      {work.licenseOption.royaltyRatio}% (Creator) /{" "}
-                      {100 - work.licenseOption.royaltyRatio}% (License Buyer)
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Action Buttons */}
             <div className="flex flex-col gap-3 pt-4">
               {/* VIEW Button */}
@@ -230,8 +202,35 @@ const Work = () => {
                   className="w-full bg-[#ffcccc] hover:bg-[#ffcccc]/70"
                   disabled={hasPaid}
                 >
-                  BUY LICENSE NFT ({work.licenseOption.price} ETH)
+                  MAKE NEW DERIVATIVE
                 </Button>
+              )}
+              {/* License Option Info */}
+              {work.licenseOption && (
+                <div className="border rounded-[4px] p-4 bg-[#ffcccc]/70">
+                  <h3 className="font-semibold mb-2">UseRight Option</h3>
+                  <div className="space-y-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Rule: </span>
+                      <span>{work.licenseOption.rule}</span>
+                    </div>
+                    {/* <div>
+                    <span className="text-muted-foreground">Price: </span>
+                    <span className="font-medium">
+                      {work.licenseOption.price} ETH
+                    </span>
+                  </div> */}
+                    <div>
+                      <span className="text-muted-foreground">
+                        Royalty Ratio:{" "}
+                      </span>
+                      <span>
+                        {work.licenseOption.royaltyRatio}% (Creator) /{" "}
+                        {100 - work.licenseOption.royaltyRatio}% (You)
+                      </span>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           </div>
