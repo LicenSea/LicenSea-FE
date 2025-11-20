@@ -1,5 +1,5 @@
 export const DEVNET_PACKAGE_ID = "";
 export const TESTNET_PACKAGE_ID =
-  "0x2b252994ce0a01d6d6948b5f74a16f38fe43523d4b15ba709efb3c8118221c5e";
+  "0xe1c481c73059c49e089c879f3f9981da6f97eef7ce25240bc8fb68c027f831e2";
 // export const TESTNET_MVR_NAME = '';
 export const MAINNET_PACKAGE_ID = "";

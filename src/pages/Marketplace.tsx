@@ -1,20 +1,24 @@
 import { useState, useMemo } from "react";
 import { ProductCard } from "@/components/Marketplace/ProductCard";
 import { FilterPanel } from "@/components/Marketplace/FilterPanel";
-import {
-  SortDropdown,
-  type SortOption,
-} from "@/components/Marketplace/SortDropdown";
+// import {
+//   SortDropdown,
+//   type SortOption,
+// } from "@/components/Marketplace/SortDropdown";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Filter, Grid, List } from "lucide-react";
+import { Filter, Loader2 } from "lucide-react";
 import { Navbar } from "@/components/Navbar/Navbar";
-import { mockWorks } from "@/data";
 import type { FilterOptions } from "@/types/work";
+import { useNetworkVariable } from "../networkConfig";
+import { useFetchWorks } from "@/lib/hook";
+import { mockWorks } from "@/data";
 
 import lineageImg from "@/assets/lineage.png";
-
+import type { Work } from "@/types/work";
 export function Marketplace() {
+  const packageId = useNetworkVariable("packageId");
+
   const [filters, setFilters] = useState<FilterOptions>({
     categories: [],
     tags: [],
@@ -25,11 +29,37 @@ export function Marketplace() {
     hasLicenseOptions: null,
   });
 
-  const [sortBy, setSortBy] = useState<SortOption>("relevance");
+  // const [sortBy, setSortBy] = useState<SortOption>("relevance");
+  const [sortBy] = useState<any>("relevance");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const { works: fetchedWorks, loading } = useFetchWorks(packageId);
 
   // Filter and sort products
   const filteredAndSortedProducts = useMemo(() => {
+    const transformedWorks = fetchedWorks
+      .map((work): Work | null => {
+        const content = work.asMoveObject?.contents?.json;
+        if (!content) return null;
+
+        return {
+          id: work.address,
+          creator: content.creator,
+          fee: Number(content.fee) / 1_000_000_000, // MIST to SUI
+          metadata: {
+            ...content.metadata,
+            tags: content.metadata?.tags || [],
+            isAdult: content.metadata?.isAdult || false,
+          },
+          preview_uri:
+            "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=500&fit=crop",
+          licenseOption: content.licenseOptions,
+          parentId: content.parentId || null,
+          blob_uri: "",
+        };
+      })
+      .filter((work): work is Work => work !== null);
+
+    //let result = transformedWorks;
     let result = [...mockWorks];
 
     // Apply filters
@@ -82,7 +112,9 @@ export function Marketplace() {
       filters.hasLicenseOptions !== undefined
     ) {
       result = result.filter((product) => {
-        const hasLicense = !!product.licenseOption;
+        // rule이 비어있지 않으면 라이선스가 있는 것으로 간주
+        const hasLicense =
+          product.licenseOption && product.licenseOption.rule !== "";
         return hasLicense === filters.hasLicenseOptions;
       });
     }
@@ -104,7 +136,7 @@ export function Marketplace() {
     }
 
     return result;
-  }, [filters, sortBy]);
+  }, [fetchedWorks, filters, sortBy]);
 
   return (
     <div className="min-w-screen min-h-screen">
@@ -180,7 +212,14 @@ export function Marketplace() {
             </div>
 
             {/* Products Grid */}
-            {filteredAndSortedProducts.length === 0 ? (
+            {loading ? (
+              <div className="flex justify-center items-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="ml-4 text-muted-foreground">
+                  Loading works from the chain...
+                </p>
+              </div>
+            ) : filteredAndSortedProducts.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">
                   No works found matching your filters.

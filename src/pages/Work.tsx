@@ -1,6 +1,6 @@
 import { Navbar } from "@/components/Navbar/Navbar";
 import { useState, useMemo } from "react";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router-dom";
 import { mockWorks } from "@/data";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { Copy, Eye } from "lucide-react";
 
 const Work = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [hasPaid, setHasPaid] = useState(false);
   const [isDecrypting, setIsDecrypting] = useState(false);
 
@@ -194,13 +195,13 @@ const Work = () => {
                 )}
               </Button>
 
-              {/* BUY LICENSE NFT Button */}
               {work.licenseOption && (
                 <Button
                   variant="outline"
                   size="lg"
                   className="w-full bg-[#ffcccc] hover:bg-[#ffcccc]/70"
                   disabled={hasPaid}
+                  onClick={() => navigate(`/upload/${work.id}`)}
                 >
                   MAKE NEW DERIVATIVE
                 </Button>
