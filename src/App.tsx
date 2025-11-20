@@ -13,6 +13,7 @@ export default function App() {
       <Route path="/marketplace" element={<Marketplace />} />
       <Route path="/work/:id" element={<Work />} />
       <Route path="/upload" element={<Upload />} />
+      <Route path="/upload/:objectid" element={<Upload />} />
       <Route path="/dashboard" element={<Dashboard />} />
     </Routes>
   );

@@ -19,20 +19,20 @@ import {
   Loader2,
 } from "lucide-react";
 import {
+  createWork,
+  createWorkWithParent,
   sealEncrypt,
-  uploadToWalrus,
-  walrusServices,
-  setSelectedWalrusService,
-  createWorkObjectTx,
+  handlePublish,
 } from "../lib/encrypt-upload";
 import { categories } from "@/data";
 import { useSuiClient, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
 import { useNetworkVariable } from "../networkConfig";
 import { Transaction } from "@mysten/sui/transactions";
+import { useParams } from "react-router-dom";
 
 const Upload = () => {
   const suiClient = useSuiClient();
-  const packageId = useNetworkVariable("packageId"); // 이 훅이 있다고 가정
+  const packageId = useNetworkVariable("packageId");
   const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction({
     execute: async ({ bytes, signature }) =>
       await suiClient.executeTransactionBlock({
@@ -42,6 +42,7 @@ const Upload = () => {
       }),
   });
 
+  const { objectid } = useParams<{ objectid: string }>();
   const [isUploading, setIsUploading] = useState(false);
   const [isDraggingThumbnail, setIsDraggingThumbnail] = useState(false);
   const [isDraggingOriginal, setIsDraggingOriginal] = useState(false);
@@ -57,45 +58,25 @@ const Upload = () => {
     category: "",
     tags: [] as string[],
     tagInput: "",
-    originWorks: [] as string[], // 선택된 licenseNFT ID들
+    parentWork: "",
     viewType: "free" as "free" | "paid",
     fee: "",
     hasLicenseOption: false,
     licenseOption: null as LicenseOption | null,
     isAdult: false,
   });
-  const [selectedWalrus, setSelectedWalrus] = useState(walrusServices[0].id);
 
-  // TODO: 나중에 API로 licenseNFT 목록 불러오기
-  const [availableLicenseNFTs, setAvailableLicenseNFTs] = useState<
-    Array<{ id: string; title: string; thumbnail?: string }>
-  >([]);
+  useEffect(() => {
+    if (objectid) {
+      setFormData((prev) => ({ ...prev, originWorks: objectid }));
+    }
+  }, [objectid]);
 
   const [licenseForm, setLicenseForm] = useState({
     rule: "",
     price: "",
     royaltyRatio: "",
   });
-
-  // licenseNFT 목록 불러오기
-  useEffect(() => {
-    // TODO: 실제 API 호출로 교체
-    const fetchLicenseNFTs = async () => {
-      try {
-        // TODO: 실제 API 엔드포인트로 교체
-        // const response = await fetch('/api/license-nfts');
-        // const data = await response.json();
-        // setAvailableLicenseNFTs(data);
-
-        // 임시: 빈 배열 유지 (나중에 API 연동)
-        setAvailableLicenseNFTs([]);
-      } catch (error) {
-        console.error("Failed to fetch license NFTs:", error);
-        setAvailableLicenseNFTs([]);
-      }
-    };
-    fetchLicenseNFTs();
-  }, []);
 
   const handleThumbnailSelect = (file: File) => {
     if (file) {
@@ -223,22 +204,6 @@ const Upload = () => {
     });
   };
 
-  const handleToggleOriginWork = (nftId: string) => {
-    setFormData({
-      ...formData,
-      originWorks: formData.originWorks.includes(nftId)
-        ? formData.originWorks.filter((id) => id !== nftId)
-        : [...formData.originWorks, nftId],
-    });
-  };
-
-  const handleRemoveOriginWork = (nftId: string) => {
-    setFormData({
-      ...formData,
-      originWorks: formData.originWorks.filter((id) => id !== nftId),
-    });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.originalFile) {
@@ -260,8 +225,15 @@ const Upload = () => {
 
     try {
       // --- 1. create Work without originalFile ---
+      let createTx: Transaction;
       console.log("Step 1: Creating initial Work object...");
-      const createTx = createWorkObjectTx(packageId, moduleName, formData);
+      if (objectid) {
+        console.log("Creating a derivative work entry...");
+        createTx = createWorkWithParent(packageId, moduleName, formData);
+      } else {
+        console.log("Creating an original work entry...");
+        createTx = createWork(packageId, moduleName, formData);
+      }
 
       const createResult = await signAndExecute({ transaction: createTx });
       console.log("Work creation transaction successful:", createResult);
@@ -298,36 +270,39 @@ const Upload = () => {
       console.log("Encryption complete.");
       console.log("Encrypted data:", encryptedData);
 
-      console.log("Uploading to Walrus...");
-      // ===============Need to check=============
-      const walrusResponse = await uploadToWalrus(encryptedData);
+      // console.log("Uploading to Walrus...");
+      // // ===============Need to check=============
+      // const walrusResponse = await uploadToWalrus(encryptedData);
 
       // Walrus 응답에서 blobId 추출 (응답 구조에 따라 달라질 수 있음)
-      let blobId;
-      if (walrusResponse?.info?.newlyCreated?.blobObject?.blobId) {
-        blobId = walrusResponse.info.newlyCreated.blobObject.blobId;
-      } else if (walrusResponse?.info?.alreadyCertified?.blobId) {
-        blobId = walrusResponse.info.alreadyCertified.blobId;
-      } else {
-        throw new Error("Could not extract blobId from Walrus response.");
-      }
-      console.log("Upload complete. Blob ID:", blobId);
+      // let blobId;
+      // if (walrusResponse?.info?.newlyCreated?.blobObject?.blobId) {
+      //   blobId = walrusResponse.info.newlyCreated.blobObject.blobId;
+      // } else if (walrusResponse?.info?.alreadyCertified?.blobId) {
+      //   blobId = walrusResponse.info.alreadyCertified.blobId;
+      // } else {
+      //   throw new Error("Could not extract blobId from Walrus response.");
+      // }
+      // console.log("Upload complete. Blob ID:", blobId);
 
       // --- 3단계: Work 객체에 blobId 연결 ---
+      // test를 위해 mock blob id
+      const blobId =
+        "6901175218210960407036410538558101086591736482944072446667089663734235462014";
       console.log("Step 3: Associating blobId to Work object...");
-      const associateTx = associateBlobIdTx(
-        packageId,
-        moduleName,
+      const publishTx = handlePublish(
         workObjectId,
         capId,
+        packageId,
+        moduleName,
         blobId
       );
-
-      const associateResult = await signAndExecute({
-        transaction: associateTx,
+      // console.log("publishtx:", publishTx);
+      const publishResult = await signAndExecute({
+        transaction: publishTx,
       });
-      console.log("Association successful:", associateResult);
-      alert(`Upload process complete! Digest: ${associateResult.digest}`);
+      console.log("Association successful:", publishResult);
+      alert(`Upload process complete! Digest: ${publishResult.digest}`);
     } catch (error) {
       console.error("Upload process failed:", error);
       alert(
@@ -516,63 +491,13 @@ const Upload = () => {
                 <Label className="font-galmuri text-base">ORIGIN WORK</Label>
               </div>
               <div className="p-4 space-y-3">
-                {availableLicenseNFTs.length === 0 ? (
+                {objectid ? (
                   <div className="text-sm text-gray-500 py-4 text-center">
-                    {/* TODO: API로 licenseNFT 목록 불러오기 */}
-                    No license NFTs available.
+                    This is a derivative work based on: {objectid}
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {availableLicenseNFTs.map((nft) => (
-                      <label
-                        key={nft.id}
-                        className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                      >
-                        <Checkbox
-                          checked={formData.originWorks.includes(nft.id)}
-                          onCheckedChange={() => handleToggleOriginWork(nft.id)}
-                        />
-                        {nft.thumbnail && (
-                          <img
-                            src={nft.thumbnail}
-                            alt={nft.title}
-                            className="w-10 h-10 rounded object-cover"
-                          />
-                        )}
-                        <span className="text-sm text-gray-900 flex-1">
-                          {nft.title}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-                {formData.originWorks.length > 0 && (
-                  <div className="pt-2 border-t border-gray-200">
-                    <div className="text-xs text-gray-600 mb-2">
-                      Selected ({formData.originWorks.length}):
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {formData.originWorks.map((nftId) => {
-                        const nft = availableLicenseNFTs.find(
-                          (n) => n.id === nftId
-                        );
-                        return (
-                          <span
-                            key={nftId}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-lg text-sm font-medium transition-colors"
-                          >
-                            {nft?.title || nftId}
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveOriginWork(nftId)}
-                              className="hover:text-red-500 transition-colors"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </span>
-                        );
-                      })}
-                    </div>
+                  <div className="text-sm text-gray-500 py-4 text-center">
+                    This is original Work
                   </div>
                 )}
               </div>
@@ -794,7 +719,7 @@ const Upload = () => {
                         setFormData({
                           ...formData,
                           hasLicenseOption: false,
-                          licenseOptions: [], // 없음 선택 시 초기화
+                          licenseOption: null,
                         })
                       }
                       className="w-4 h-4 appearance-none border border-gray-300 rounded-full bg-white checked:border-primary checked:bg-primary relative cursor-pointer transition-all hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
