@@ -11,6 +11,16 @@ import { ProductCard } from "@/components/Marketplace/ProductCard";
 import { categories } from "@/data";
 import { Copy, Eye } from "lucide-react";
 import { Work } from "@/types/work";
+import {
+  useCurrentAccount,
+  useSignPersonalMessage,
+  useSignTransaction,
+  useSuiClient,
+} from "@mysten/dapp-kit";
+import { useNetworkVariable } from "@/networkConfig";
+import { SealClient } from "@mysten/seal";
+import { Transaction } from "@mysten/sui/transactions";
+import { payView } from "@/lib/payView";
 
 export default function WorkPage() {
   const params = useParams();
@@ -21,6 +31,11 @@ export default function WorkPage() {
   const [loading, setLoading] = useState(true);
   const [hasPaid, setHasPaid] = useState(false);
   const [isDecrypting, setIsDecrypting] = useState(false);
+
+  const suiClient = useSuiClient();
+  const packageId = useNetworkVariable("packageId");
+  const currentAccount = useCurrentAccount();
+  const { mutateAsync: signTransaction } = useSignTransaction();
 
   // const work = useMemo(() => {
   //   return mockWorks.find((w) => w.id === id);
@@ -52,8 +67,12 @@ export default function WorkPage() {
         const data = await response.json();
         setWork(data.work);
 
-        // Derivative works 조회 (parentId가 현재 work의 id인 것들)
+        if (data.work.fee === 0) {
+          setHasPaid(true);
+        }
+
         if (data.work) {
+          // Derivative works 조회 (parentId가 현재 work의 id인 것들)
           const derivativesResponse = await fetch("/api/works");
           const derivativesData = await derivativesResponse.json();
           const derivatives = (derivativesData.works || []).filter(
@@ -72,10 +91,102 @@ export default function WorkPage() {
     loadWork();
   }, [id]);
 
+  // View object 확인 함수
+  const checkViewObject = async () => {
+    if (!currentAccount || !work) return null;
+
+    try {
+      const ownedObjects = await suiClient.getOwnedObjects({
+        owner: currentAccount.address,
+        options: { showContent: true, showType: true },
+        filter: {
+          StructType: `${packageId}::work::View`,
+        },
+      });
+
+      // 현재 work에 대한 View object 찾기
+      const viewObject = ownedObjects.data.find((obj) => {
+        if (obj.data?.content && "fields" in obj.data.content) {
+          const fields = obj.data.content.fields as any;
+          return fields.work_id === work.id;
+        }
+        return false;
+      });
+
+      return viewObject?.data?.objectId || null;
+    } catch (error) {
+      console.error("Error checking view object:", error);
+      return null;
+    }
+  };
+
   const handleDecrypt = async () => {
-    if (!work || hasPaid) return;
+    if (!work || hasPaid || !currentAccount) return;
 
     setIsDecrypting(true);
+    setError(null);
+
+    try {
+      // 1. Pay 트랜잭션 실행
+      const feeInMist = BigInt(Math.floor(work.fee * 1_000_000_000));
+      const payTx = payView(packageId, "work", work.id, feeInMist);
+      const signedPayTx = await signTransaction({ transaction: payTx });
+
+      const payResponse = await fetch("/api/transaction/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          signedTransaction: {
+            bytes: signedPayTx.bytes,
+            signature: signedPayTx.signature,
+          },
+          transactionType: "pay",
+          metadata: {
+            workId: work.id,
+            fee: work.fee,
+          },
+        }),
+      });
+
+      const payResult = await payResponse.json();
+
+      if (!payResult.success) {
+        throw new Error(payResult.error || "Pay transaction failed");
+      }
+
+      // 2. View object ID 추출
+      const createdObjects = payResult.objectChanges?.filter(
+        (change: any) => change.type === "created"
+      );
+      const viewObject = createdObjects?.find((c: any) =>
+        c.objectType.endsWith("::work::View")
+      );
+
+      if (!viewObject) {
+        throw new Error("View object not found in transaction result");
+      }
+
+      const viewId = viewObject.objectId;
+      setViewObjectId(viewId);
+
+      // 3. 로열티 정산
+      try {
+        await fetch("/api/royalty/distribute", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workId: work.id,
+            revenue: work.fee,
+          }),
+        });
+      } catch (royaltyError) {
+        console.error("Royalty distribution failed:", royaltyError);
+        // 로열티 정산 실패해도 계속 진행
+      }
+
+      // 4. Seal SDK로 복호화
+      // TODO
+    } catch (error) {}
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setHasPaid(true);
     setIsDecrypting(false);
