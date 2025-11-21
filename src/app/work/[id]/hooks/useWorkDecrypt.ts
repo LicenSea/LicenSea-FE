@@ -104,6 +104,7 @@ async function decryptBlob(
   blobId: string,
   viewObjectId: string,
   workId: string,
+  workFileType: string,
   sessionKey: SessionKey,
   suiClient: any,
   sealClient: SealClient,
@@ -155,7 +156,7 @@ async function decryptBlob(
   });
 
   // 6. Blob URL 생성
-  const blob = new Blob([decryptedFile], { type: "image/jpeg" });
+  const blob = new Blob([decryptedFile], { type: workFileType });
   return URL.createObjectURL(blob);
 }
 
@@ -295,6 +296,7 @@ export const useWorkDecrypt = () => {
         blobId,
         viewId!,
         work.id,
+        work.metadata.file_type,
         sessionKey,
         suiClient,
         sealClient,

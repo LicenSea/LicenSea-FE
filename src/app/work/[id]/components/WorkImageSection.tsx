@@ -17,6 +17,7 @@ export const WorkImageSection = ({
   const getImageUri = () => {
     // fee가 0이면 바로 blob_uri 표시
     if (work.fee === 0 && work.blob_uri) {
+      // TODO: walrus 에 원본 파일 요청
       return work.blob_uri;
     }
     // fee가 0 이상이고 View object가 있으면 복호화된 URI 표시
