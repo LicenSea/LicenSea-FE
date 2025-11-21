@@ -199,6 +199,7 @@ export default function WorkPage() {
     }
     return work.preview_uri || null;
   };
+  console.log("Fetched work:", work);
 
   if (!work) {
     return (

@@ -331,7 +331,8 @@ export default function UploadPage() {
         suiClient,
         formData.originalFile,
         packageId,
-        workObjectId
+        workObjectId,
+        formData.viewType
       );
       console.log("Encryption and upload complete.", walrusResponse);
 

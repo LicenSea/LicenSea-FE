@@ -30,7 +30,6 @@ export const createWork = (
 
       // licenseOptions field
       tx.pure.string(formData.licenseOption?.rule || ""), // rule
-      // tx.pure.u64(Number(formData.licenseOption?.price || 0) * 1_000_000_000), // price (SUI to MIST)
       tx.pure.u64(formData.licenseOption?.royaltyRatio || 0), // royaltyRatio
 
       // other fields
@@ -134,20 +133,13 @@ function getPublisherUrl(path: string): string {
   return `${service?.publisherUrl}/v1/${cleanPath}`;
 }
 
-/**
- * Encrypts a file using Seal and uploads it to Walrus.
- * @param suiClient - The SuiClient instance.
- * @param file - The file to encrypt and upload.
- * @param packageId - The Sui package ID.
- * @param policyObject - The policy object ID for Seal encryption.
- * @param serviceId - The ID of the Walrus service to use for the upload.
- * @returns The storage information from Walrus.
- */
+// if free, don't encrypt
 export const sealAndUpload = async (
   suiClient: SuiClient,
   file: File,
   packageId: string,
-  policyObject: string
+  policyObject: string,
+  viewType: string
 ): Promise<{ info: any }> => {
   // These are the Seal server object IDs on the Sui network.
   const serverObjectIds = [
@@ -155,23 +147,32 @@ export const sealAndUpload = async (
     "0xf5d14a81a982144ae441cd7d64b09027f116a468bd36e7eca494f750591623c8",
   ];
 
-  const sealClient = new SealClient({
-    suiClient,
-    serverConfigs: serverObjectIds.map((id) => ({ objectId: id, weight: 1 })),
-    verifyKeyServers: false,
-  });
+  let encryptedBytes: Uint8Array;
 
-  const fileBuffer = await file.arrayBuffer();
-  const nonce = crypto.getRandomValues(new Uint8Array(5));
-  const policyObjectBytes = fromHex(policyObject);
-  const id = toHex(new Uint8Array([...policyObjectBytes, ...nonce]));
+  if (viewType === "paid") {
+    const sealClient = new SealClient({
+      suiClient,
+      serverConfigs: serverObjectIds.map((id) => ({ objectId: id, weight: 1 })),
+      verifyKeyServers: false,
+    });
 
-  const { encryptedObject: encryptedBytes } = await sealClient.encrypt({
-    threshold: 2,
-    packageId,
-    id,
-    data: new Uint8Array(fileBuffer),
-  });
+    const fileBuffer = await file.arrayBuffer();
+    const nonce = crypto.getRandomValues(new Uint8Array(5));
+    const policyObjectBytes = fromHex(policyObject);
+    const id = toHex(new Uint8Array([...policyObjectBytes, ...nonce]));
+
+    const { encryptedObject } = await sealClient.encrypt({
+      threshold: 2,
+      packageId,
+      id,
+      data: new Uint8Array(fileBuffer),
+    });
+    encryptedBytes = encryptedObject;
+  } else {
+    // For free content, upload without encryption
+    const fileBuffer = await file.arrayBuffer();
+    encryptedBytes = new Uint8Array(fileBuffer);
+  }
 
   const response = await fetch(
     `${getPublisherUrl(`/v1/blobs?epochs=${NUM_EPOCH}`)}`,
