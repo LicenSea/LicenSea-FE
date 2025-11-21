@@ -331,7 +331,8 @@ export default function UploadPage() {
         suiClient,
         formData.originalFile,
         packageId,
-        workObjectId
+        workObjectId,
+        "service1" // default service
       );
       console.log("Encryption and upload complete.", walrusResponse);
 
