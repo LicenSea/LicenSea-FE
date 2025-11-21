@@ -7,7 +7,6 @@ import { MarketplaceContent } from "./components/MarketplaceContent";
 import { useFetchWorks } from "@/lib/hooks/useFetchWorks";
 import { useWorksTransform } from "./hooks/useWorksTransform";
 import { useFilteredWorks } from "./hooks/useFilteredWorks";
-import { mockWorks } from "@/data";
 import type { FilterOptions } from "@/types/work";
 
 const defaultFilters: FilterOptions = {
@@ -30,8 +29,7 @@ export default function MarketplacePage() {
   const { works: fetchedWorks, loading } = useFetchWorks();
   const transformedWorks = useWorksTransform(fetchedWorks);
 
-  // 임시로 mockWorks 사용 (Indexer 데이터가 없을 때)
-  const works = transformedWorks.length > 0 ? transformedWorks : mockWorks;
+  const works = transformedWorks.length > 0 ? transformedWorks : [];
 
   const filteredWorks = useFilteredWorks({
     works,
