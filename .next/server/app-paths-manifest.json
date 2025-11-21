@@ -1,7 +1,0 @@
-{
-  "/upload/page": "app/upload/page.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/marketplace/page": "app/marketplace/page.js",
-  "/work/[id]/page": "app/work/[id]/page.js",
-  "/page": "app/page.js"
-}
