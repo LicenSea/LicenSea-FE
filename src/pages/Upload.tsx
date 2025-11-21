@@ -21,8 +21,8 @@ import {
 import {
   createWork,
   createWorkWithParent,
-  sealEncrypt,
   handlePublish,
+  sealAndUpload,
 } from "../lib/encrypt-upload";
 import { categories } from "@/data";
 import { useSuiClient, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
@@ -48,6 +48,7 @@ const Upload = () => {
   const [isDraggingOriginal, setIsDraggingOriginal] = useState(false);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
   const originalInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState({
     thumbnailFile: null as File | null,
     thumbnailPreview: null as string | null,
@@ -260,35 +261,27 @@ const Upload = () => {
 
       // --- 2. encrypt & upload originalFile to Walrus ---
       console.log("Step 2: Encrypting and uploading file...");
-      console.log("original file:", formData.originalFile);
-      const encryptedData = await sealEncrypt(
+      const walrusResponse = await sealAndUpload(
         suiClient,
         formData.originalFile,
         packageId,
-        workObjectId
+        workObjectId,
+        "service1" // default service
       );
-      console.log("Encryption complete.");
-      console.log("Encrypted data:", encryptedData);
+      console.log("Encryption and upload complete.", walrusResponse);
 
-      // console.log("Uploading to Walrus...");
-      // // ===============Need to check=============
-      // const walrusResponse = await uploadToWalrus(encryptedData);
+      // Extract blobId from Walrus response
+      let blobId;
+      if (walrusResponse?.info?.newlyCreated?.blobObject?.blobId) {
+        blobId = walrusResponse.info.newlyCreated.blobObject.blobId;
+      } else if (walrusResponse?.info?.alreadyCertified?.blobId) {
+        blobId = walrusResponse.info.alreadyCertified.blobId;
+      } else {
+        throw new Error("Could not extract blobId from Walrus response.");
+      }
+      console.log("Upload complete. Blob ID:", blobId);
 
-      // Walrus 응답에서 blobId 추출 (응답 구조에 따라 달라질 수 있음)
-      // let blobId;
-      // if (walrusResponse?.info?.newlyCreated?.blobObject?.blobId) {
-      //   blobId = walrusResponse.info.newlyCreated.blobObject.blobId;
-      // } else if (walrusResponse?.info?.alreadyCertified?.blobId) {
-      //   blobId = walrusResponse.info.alreadyCertified.blobId;
-      // } else {
-      //   throw new Error("Could not extract blobId from Walrus response.");
-      // }
-      // console.log("Upload complete. Blob ID:", blobId);
-
-      // --- 3단계: Work 객체에 blobId 연결 ---
-      // test를 위해 mock blob id
-      const blobId =
-        "6901175218210960407036410538558101086591736482944072446667089663734235462014";
+      // --- Step 3: Associate blobId to Work object ---
       console.log("Step 3: Associating blobId to Work object...");
       const publishTx = handlePublish(
         workObjectId,
@@ -297,7 +290,6 @@ const Upload = () => {
         moduleName,
         blobId
       );
-      // console.log("publishtx:", publishTx);
       const publishResult = await signAndExecute({
         transaction: publishTx,
       });
@@ -630,74 +622,6 @@ const Upload = () => {
                     ))}
                   </div>
                 )}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-md border border-gray-300 overflow-hidden">
-              {/* 공개 유형 */}
-              <div className="p-4 border-b border-gray-300 bg-gray-50">
-                <Label className="text-base font-galmuri">
-                  VISIBILITY TYPE
-                </Label>
-              </div>
-              <div className="p-4">
-                <div className="flex gap-6">
-                  <label className="flex items-center gap-2 cursor-pointer group">
-                    <input
-                      type="radio"
-                      name="viewType"
-                      value="free"
-                      checked={formData.viewType === "free"}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          viewType: e.target.value as "free" | "paid",
-                          fee: "0",
-                        })
-                      }
-                      className="w-4 h-4 appearance-none border border-gray-300 rounded-full bg-white checked:border-primary checked:bg-primary relative cursor-pointer transition-all hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
-                    <span className="text-sm font-medium text-gray-900">
-                      free
-                    </span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer group">
-                    <input
-                      type="radio"
-                      name="viewType"
-                      value="paid"
-                      checked={formData.viewType === "paid"}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          viewType: e.target.value as "free" | "paid",
-                        })
-                      }
-                      className="w-4 h-4 appearance-none border border-gray-300 rounded-full bg-white checked:border-primary checked:bg-primary relative cursor-pointer transition-all hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
-                    <span className="text-sm font-medium text-gray-900">
-                      paid
-                    </span>
-                    {formData.viewType === "paid" && (
-                      <div className="ml-4 flex gap-2 items-center">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          value={formData.fee}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              fee: e.target.value,
-                            })
-                          }
-                          className="border-gray-300 focus:border-primary focus:ring-primary"
-                        />
-                        <span className="text-sm text-gray-600">SUI</span>
-                      </div>
-                    )}
-                  </label>
-                </div>
               </div>
             </div>
 

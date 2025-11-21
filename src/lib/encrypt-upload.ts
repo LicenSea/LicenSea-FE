@@ -3,6 +3,13 @@ import { SuiClient } from "@mysten/sui/client";
 import { fromHex, toHex } from "@mysten/sui/utils";
 import { Transaction } from "@mysten/sui/transactions";
 
+type WalrusService = {
+  id: string;
+  name: string;
+  publisherUrl: string;
+  aggregatorUrl: string;
+};
+
 export const createWork = (
   packageId: string,
   moduleName: string,
@@ -73,46 +80,6 @@ export const createWorkWithParent = (
   return tx;
 };
 
-// seal encrypt function
-export const sealEncrypt = async (
-  suiClient: SuiClient,
-  file: File,
-  packageId: string,
-  policyObject: string
-): Promise<Uint8Array> => {
-  const serverObjectIds = [
-    "0x73d05d62c18d9374e3ea529e8e0ed6161da1a141a94d3f76ae3fe4e99356db75",
-    "0xf5d14a81a982144ae441cd7d64b09027f116a468bd36e7eca494f750591623c8",
-  ];
-
-  const client = new SealClient({
-    suiClient,
-    serverConfigs: serverObjectIds.map((id) => ({
-      objectId: id,
-      weight: 1,
-    })),
-    verifyKeyServers: false,
-  });
-
-  // 파일을 ArrayBuffer로 변환
-  const fileBuffer = await file.arrayBuffer();
-
-  // 암호화에 사용할 고유 ID 생성
-  const nonce = crypto.getRandomValues(new Uint8Array(5));
-  const policyObjectBytes = fromHex(policyObject);
-  const id = toHex(new Uint8Array([...policyObjectBytes, ...nonce]));
-
-  // 파일 암호화
-  const { encryptedObject: encryptedBytes } = await client.encrypt({
-    threshold: 2,
-    packageId,
-    id,
-    data: new Uint8Array(fileBuffer),
-  });
-
-  return encryptedBytes;
-};
-
 export const handlePublish = (
   work_id: string,
   cap_id: string,
@@ -129,71 +96,114 @@ export const handlePublish = (
   return tx;
 };
 
-//
-//
-//
-//====================Walrus 업로드 함수(백엔드로 이전 예정)====================//
+const NUM_EPOCH = 1; // The number of epochs to store the file for
 
-// Walrus 서비스 목록 (실제 운영 URL로 교체해야 합니다)
-export const walrusServices = [
+export const services: WalrusService[] = [
   {
     id: "service1",
     name: "walrus.space",
-
-    publisherUrl: "https://walrus.space",
+    publisherUrl: "/publisher1",
+    aggregatorUrl: "/aggregator1",
   },
   {
     id: "service2",
     name: "staketab.org",
-    publisherUrl: "https://sui.staketab.org/walrus",
+    publisherUrl: "/publisher2",
+    aggregatorUrl: "/aggregator2",
+  },
+  {
+    id: "service3",
+    name: "redundex.com",
+    publisherUrl: "/publisher3",
+    aggregatorUrl: "/aggregator3",
+  },
+  {
+    id: "service4",
+    name: "nodes.guru",
+    publisherUrl: "/publisher4",
+    aggregatorUrl: "/aggregator4",
+  },
+  {
+    id: "service5",
+    name: "banansen.dev",
+    publisherUrl: "/publisher5",
+    aggregatorUrl: "/aggregator5",
+  },
+  {
+    id: "service6",
+    name: "everstake.one",
+    publisherUrl: "/publisher6",
+    aggregatorUrl: "/aggregator6",
   },
 ];
 
-// 현재 선택된 Walrus 서비스 ID (여기서는 기본값으로 설정)
-let selectedServiceId = "service1";
+const selectedService = "service1"; // Default selected service
 
-export const setSelectedWalrusService = (serviceId: string) => {
-  selectedServiceId = serviceId;
-};
+function getAggregatorUrl(path: string): string {
+  const service = services.find((s) => s.id === selectedService);
+  const cleanPath = path.replace(/^\/+/, "").replace(/^v1\//, "");
+  return `${service?.aggregatorUrl}/v1/${cleanPath}`;
+}
 
-const getPublisherUrl = (path: string): string => {
-  const service = walrusServices.find((s) => s.id === selectedServiceId);
-  if (!service) {
-    throw new Error(`Walrus service with id "${selectedServiceId}" not found.`);
-  }
-  const cleanPath = path.startsWith("/") ? path.substring(1) : path;
-  const baseUrl = service.publisherUrl.endsWith("/")
-    ? service.publisherUrl
-    : `${service.publisherUrl}/`;
-  return `${baseUrl}${cleanPath}`;
-};
+function getPublisherUrl(path: string): string {
+  const service = services.find((s) => s.id === selectedService);
+  const cleanPath = path.replace(/^\/+/, "").replace(/^v1\//, "");
+  return `${service?.publisherUrl}/v1/${cleanPath}`;
+}
 
 /**
- * 암호화된 파일을 Walrus에 업로드합니다.
- * @param encryptedData - 암호화된 데이터 (Uint8Array)
- * @returns Walrus 업로드 결과 (blob ID 포함)
+ * Encrypts a file using Seal and uploads it to Walrus.
+ * @param suiClient - The SuiClient instance.
+ * @param file - The file to encrypt and upload.
+ * @param packageId - The Sui package ID.
+ * @param policyObject - The policy object ID for Seal encryption.
+ * @param serviceId - The ID of the Walrus service to use for the upload.
+ * @returns The storage information from Walrus.
  */
-export const uploadToWalrus = async (
-  encryptedData: Uint8Array
-): Promise<any> => {
-  const NUM_EPOCH = 1; // TODO: 저장 기간(epoch) 설정
+export const sealAndUpload = async (
+  suiClient: SuiClient,
+  file: File,
+  packageId: string,
+  policyObject: string
+): Promise<{ info: any }> => {
+  // These are the Seal server object IDs on the Sui network.
+  const serverObjectIds = [
+    "0x73d05d62c18d9374e3ea529e8e0ed6161da1a141a94d3f76ae3fe4e99356db75",
+    "0xf5d14a81a982144ae441cd7d64b09027f116a468bd36e7eca494f750591623c8",
+  ];
+
+  const sealClient = new SealClient({
+    suiClient,
+    serverConfigs: serverObjectIds.map((id) => ({ objectId: id, weight: 1 })),
+    verifyKeyServers: false,
+  });
+
+  const fileBuffer = await file.arrayBuffer();
+  const nonce = crypto.getRandomValues(new Uint8Array(5));
+  const policyObjectBytes = fromHex(policyObject);
+  const id = toHex(new Uint8Array([...policyObjectBytes, ...nonce]));
+
+  const { encryptedObject: encryptedBytes } = await sealClient.encrypt({
+    threshold: 2,
+    packageId,
+    id,
+    data: new Uint8Array(fileBuffer),
+  });
+
   const response = await fetch(
-    getPublisherUrl(`/v1/blobs?epochs=${NUM_EPOCH}`),
+    `${getPublisherUrl(`/v1/blobs?epochs=${NUM_EPOCH}`)}`,
     {
       method: "PUT",
-      body: encryptedData,
-      headers: {
-        "Content-Type": "application/octet-stream",
-      },
+      body: encryptedBytes,
     }
   );
 
   if (!response.ok) {
-    const errorText = await response.text();
     throw new Error(
-      `Error publishing the blob on Walrus: ${response.status} ${errorText}`
+      `Error publishing the blob on Walrus (status: ${response})`
     );
   }
 
-  return response.json();
+  const info = await response.json();
+  return { info };
 };
