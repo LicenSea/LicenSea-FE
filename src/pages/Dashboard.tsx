@@ -16,7 +16,7 @@ import {
   Package,
   Award,
 } from "lucide-react";
-import { useNavigate } from "react-router";
+import { useRouter } from "next/navigation";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 type TabType =
@@ -148,7 +148,7 @@ const RevenueDonutChart = ({
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
-  const navigate = useNavigate();
+  const router = useRouter();
 
   // TODO: 실제로는 연결된 지갑 주소를 사용
   const currentUserAddress =
@@ -278,7 +278,7 @@ const Dashboard = () => {
               </div>
               <p className="text-sm text-muted-foreground">Connected Wallet</p>
             </div>
-            <Button onClick={() => navigate("/upload")}>
+            <Button onClick={() => router.push("/upload")}>
               <Upload className="w-4 h-4 mr-2" />
               Upload New Work
             </Button>
@@ -377,7 +377,7 @@ const Dashboard = () => {
                   <div
                     key={work.id}
                     className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/work/${work.id}`)}
+                    onClick={() => router.push(`/work/${work.id}`)}
                   >
                     {work.preview_uri ? (
                       <img
@@ -417,7 +417,7 @@ const Dashboard = () => {
                 <Button
                   variant="outline"
                   className="mt-4"
-                  onClick={() => navigate("/upload")}
+                  onClick={() => router.push("/upload")}
                 >
                   Upload Your First Work
                 </Button>
@@ -437,7 +437,7 @@ const Dashboard = () => {
                   <div
                     key={work.id}
                     className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/work/${work.id}`)}
+                    onClick={() => router.push(`/work/${work.id}`)}
                   >
                     {work.preview_uri ? (
                       <img
@@ -477,7 +477,7 @@ const Dashboard = () => {
                 <Button
                   variant="outline"
                   className="mt-4"
-                  onClick={() => navigate("/marketplace")}
+                  onClick={() => router.push("/marketplace")}
                 >
                   Browse Marketplace
                 </Button>
@@ -565,7 +565,7 @@ const Dashboard = () => {
             {myWorks.length} {myWorks.length === 1 ? "work" : "works"} uploaded
           </p>
         </div>
-        <Button onClick={() => navigate("/upload")}>
+        <Button onClick={() => router.push("/upload")}>
           <Upload className="w-4 h-4 mr-2" />
           Upload New Work
         </Button>
@@ -585,7 +585,7 @@ const Dashboard = () => {
             <p className="text-muted-foreground mb-6">
               Start creating and uploading your first work
             </p>
-            <Button onClick={() => navigate("/upload")}>
+            <Button onClick={() => router.push("/upload")}>
               <Upload className="w-4 h-4 mr-2" />
               Upload Your First Work
             </Button>
@@ -619,7 +619,7 @@ const Dashboard = () => {
             <p className="text-muted-foreground mb-6">
               Explore the marketplace and purchase works
             </p>
-            <Button onClick={() => navigate("/marketplace")}>
+            <Button onClick={() => router.push("/marketplace")}>
               Browse Marketplace
             </Button>
           </CardContent>
@@ -641,7 +641,7 @@ const Dashboard = () => {
         {purchasedLicenses.length > 0 && (
           <Button
             onClick={() => {
-              navigate("/upload");
+              router.push("/upload");
               // TODO: 라이선스 선택 상태로 업로드 페이지 열기
             }}
           >
@@ -696,7 +696,7 @@ const Dashboard = () => {
                   <Button
                     variant="outline"
                     className="w-full mt-4"
-                    onClick={() => navigate(`/work/${work.id}`)}
+                    onClick={() => router.push(`/work/${work.id}`)}
                   >
                     View Original Work
                   </Button>
@@ -715,7 +715,7 @@ const Dashboard = () => {
             <p className="text-muted-foreground mb-6">
               Purchase license NFTs to create derivative works
             </p>
-            <Button onClick={() => navigate("/marketplace")}>
+            <Button onClick={() => router.push("/marketplace")}>
               Browse Marketplace
             </Button>
           </CardContent>
@@ -738,7 +738,7 @@ const Dashboard = () => {
         </div>
         <Button
           onClick={() => {
-            navigate("/upload");
+            router.push("/upload");
             // TODO: 라이선스 선택 상태로 업로드 페이지 열기
           }}
         >
@@ -766,7 +766,7 @@ const Dashboard = () => {
                       </h4>
                       <div
                         className="cursor-pointer"
-                        onClick={() => navigate(`/work/${derivative.id}`)}
+                        onClick={() => router.push(`/work/${derivative.id}`)}
                       >
                         {derivative.preview_uri ? (
                           <img
@@ -800,7 +800,7 @@ const Dashboard = () => {
                           <div
                             key={original.id}
                             className="cursor-pointer"
-                            onClick={() => navigate(`/work/${original.id}`)}
+                            onClick={() => router.push(`/work/${original.id}`)}
                           >
                             {original.preview_uri ? (
                               <img
@@ -839,13 +839,13 @@ const Dashboard = () => {
             <div className="flex gap-4 justify-center">
               <Button
                 variant="outline"
-                onClick={() => navigate("/marketplace")}
+                onClick={() => router.push("/marketplace")}
               >
                 Browse Licenses
               </Button>
               <Button
                 onClick={() => {
-                  navigate("/upload");
+                  router.push("/upload");
                 }}
               >
                 <Layers className="w-4 h-4 mr-2" />

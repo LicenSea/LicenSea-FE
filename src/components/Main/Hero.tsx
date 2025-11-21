@@ -1,11 +1,13 @@
+"use client";
+
 import { motion } from "framer-motion";
 import { Button } from "../ui/button";
 import { AnimatedLogo } from "./AnimatedLogo.tsx";
 import InfiniteExpansion from "./InfiniteExpansion.tsx";
-import { useNavigate } from "react-router";
+import { useRouter } from "next/navigation";
 
 export function Hero() {
-  const nav = useNavigate();
+  const router = useRouter();
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-white">
@@ -99,7 +101,7 @@ export function Hero() {
             size="lg"
             variant="outline"
             className="bg-gradient-to-r from-[#a3f9d8] to-[#e6fc73] hover:from-[#a3f9d8]/50 hover:to-[#e6fc73]/50 text-[#262d5c]"
-            onClick={() => nav("/upload")}
+            onClick={() => router.push("/upload")}
           >
             Explore Your Marketplace
           </Button>

@@ -1,3 +1,5 @@
+"use client";
+
 import { Heart, Eye, Copy } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -5,7 +7,7 @@ import { Card, CardContent } from "../ui/card";
 import { useState } from "react";
 import type { Work } from "@/types/work";
 import { categories } from "@/data";
-import { useNavigate } from "react-router";
+import { useRouter } from "next/navigation";
 
 interface ProductCardProps {
   product: Work;
@@ -24,7 +26,7 @@ export function ProductCard({
   onViewDetails,
   onWishlistToggle,
 }: ProductCardProps) {
-  const nav = useNavigate();
+  const router = useRouter();
 
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -52,7 +54,7 @@ export function ProductCard({
       // }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={() => nav(`/work/${product.id}`)}
+      onClick={() => router.push(`/work/${product.id}`)}
     >
       <CardContent className="p-0">
         {/* Image Container */}

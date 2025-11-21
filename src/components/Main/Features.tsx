@@ -1,3 +1,5 @@
+"use client";
+
 import { motion } from "framer-motion";
 import { Lock, Infinity, Lightbulb, Globe } from "lucide-react";
 

@@ -1,3 +1,5 @@
+"use client";
+
 import { Waves, Twitter, Github } from "lucide-react";
 
 export function Footer() {

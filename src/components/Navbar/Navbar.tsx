@@ -1,14 +1,20 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "../ui/button";
-import { Check, Menu, X } from "lucide-react";
+"use client";
 
-import logo from "@/assets/logo.png";
+import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
+
+import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
+
+import { Check, Menu, X } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 import { ConnectButton, useCurrentAccount } from "@mysten/dapp-kit";
 
 export function Navbar() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
   const navLinks = [
@@ -16,6 +22,17 @@ export function Navbar() {
     { name: "UPLOAD", href: "/upload" },
     { name: "DASHBOARD", href: "/dashboard" },
   ];
+
+  const handleSync = async () => {
+    try {
+      console.log("?");
+      const response = await fetch("/api/works/sync", { method: "POST" });
+      // const data = await response.json();
+    } catch (error) {
+      console.error("Sync failed:", error);
+    } finally {
+    }
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white backdrop-blur-md border-b border-gray-300">
@@ -25,8 +42,9 @@ export function Navbar() {
             {/* Logo */}
             <a href="/">
               <div className="flex items-center gap-2">
-                <img
+                <Image
                   src={logo}
+                  alt="logo"
                   className="border border-[#262d5c] rounded-xs w-8 h-8"
                 />
                 <span className="font-galmuri text-2xl text-[#262d5c]">
@@ -38,7 +56,7 @@ export function Navbar() {
             {/* Desktop Navigation */}
             <div className="py-2 px-4 hidden md:flex items-center gap-8 bg-black rounded-[4px]">
               {navLinks.map((link) => {
-                const isActive = window.location.pathname === link.href;
+                const isActive = pathname === link.href;
                 return (
                   <a
                     key={link.name}
@@ -68,6 +86,7 @@ export function Navbar() {
             {/* <Button className="bg-gradient-to-r from-[#a3f9d8] to-[#e6fc73] hover:from-[#a3f9d8] hover:to-[#f0e8e5] text-[#262d5c] border-0">
               Launch App
             </Button> */}
+            {/* <Button onClick={() => handleSync()}>Sync</Button> */}
           </div>
 
           {/* Mobile Menu Button */}
