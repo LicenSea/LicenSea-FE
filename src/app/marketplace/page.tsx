@@ -64,7 +64,7 @@ export default function MarketplacePage() {
       .filter((work): work is Work => work !== null);
 
     // 임시로 mockWorks 사용 (Indexer 데이터가 없을 때)
-    console.log(transformedWorks);
+    // console.log(transformedWorks);
     let result =
       transformedWorks.length > 0 ? transformedWorks : [...mockWorks];
 
