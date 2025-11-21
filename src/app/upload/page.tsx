@@ -864,7 +864,7 @@ export default function UploadPage() {
                           }
                           className="border-gray-300 focus:border-primary focus:ring-primary resize-none"
                         />
-                        <label>Price (SUI):</label>
+                        {/* <label>Price (SUI):</label>
                         <Input
                           type="number"
                           step="0.01"
@@ -877,7 +877,7 @@ export default function UploadPage() {
                             })
                           }
                           className="border-gray-300 focus:border-primary focus:ring-primary"
-                        />
+                        /> */}
                         <label>Creator Royalty (%):</label>
                         <Input
                           type="number"

@@ -23,7 +23,7 @@ export const createWork = (
 
       // licenseOptions field
       tx.pure.string(formData.licenseOption?.rule || ""), // rule
-      tx.pure.u64(Number(formData.licenseOption?.price || 0) * 1_000_000_000), // price (SUI to MIST)
+      // tx.pure.u64(Number(formData.licenseOption?.price || 0) * 1_000_000_000), // price (SUI to MIST)
       tx.pure.u64(formData.licenseOption?.royaltyRatio || 0), // royaltyRatio
 
       // other fields
@@ -57,7 +57,7 @@ export const createWorkWithParent = (
 
       // licenseOptions field
       tx.pure.string(formData.licenseOption?.rule || ""), // rule
-      tx.pure.u64(Number(formData.licenseOption?.price || 0) * 1_000_000_000), // price (SUI to MIST)
+      // tx.pure.u64(Number(formData.licenseOption?.price || 0) * 1_000_000_000), // price (SUI to MIST)
       tx.pure.u64(formData.licenseOption?.royaltyRatio || 0), // royaltyRatio
 
       // other fields

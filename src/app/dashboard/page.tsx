@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { Navbar } from "@/components/Navbar/Navbar";
@@ -21,23 +21,119 @@ import {
   Award,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { ChevronRight, ChevronDown } from "lucide-react";
 
 type TabType =
   | "overview"
   | "my-works"
   | "purchased"
-  | "licenses"
   | "derivatives"
   | "earnings";
+
+// 트리 노드 타입
+type TreeNode = {
+  work: {
+    id: string;
+    title: string;
+    creator: string;
+    preview_uri?: string;
+    created_at?: string;
+  };
+  children: TreeNode[];
+};
+
+// 트리 노드 컴포넌트
+const TreeNodeComponent = ({
+  node,
+  level = 0,
+  expandedNodes,
+  onToggleExpand,
+  router,
+}: {
+  node: TreeNode;
+  level?: number;
+  expandedNodes: Set<string>;
+  onToggleExpand: (workId: string) => void;
+  router: {
+    push: (href: string) => void;
+  };
+}) => {
+  const isExpanded = expandedNodes.has(node.work.id);
+  const hasChildren = node.children.length > 0;
+  const indent = level * 24;
+
+  return (
+    <div className="mb-2">
+      <div
+        className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
+        style={{ paddingLeft: `${indent + 8}px` }}
+        onClick={() => router.push(`/work/${node.work.id}`)}
+      >
+        {hasChildren && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleExpand(node.work.id);
+            }}
+            className="p-1 hover:bg-muted rounded"
+          >
+            {isExpanded ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
+            )}
+          </button>
+        )}
+        {!hasChildren && <div className="w-6" />}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          {node.work.preview_uri ? (
+            <img
+              src={node.work.preview_uri}
+              alt={node.work.title}
+              className="w-12 h-12 rounded object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded bg-muted flex items-center justify-center flex-shrink-0">
+              <Package className="w-6 h-6 text-muted-foreground" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="font-medium truncate">{node.work.title}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {node.work.creator.slice(0, 8)}...
+            </p>
+          </div>
+          {hasChildren && (
+            <Badge variant="secondary" className="flex-shrink-0">
+              {node.children.length}
+            </Badge>
+          )}
+        </div>
+      </div>
+      {isExpanded && hasChildren && (
+        <div className="ml-4">
+          {node.children.map((child) => (
+            <TreeNodeComponent
+              key={child.work.id}
+              node={child}
+              level={level + 1}
+              expandedNodes={expandedNodes}
+              onToggleExpand={onToggleExpand}
+              router={router}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // 도넛 차트 컴포넌트
 const RevenueDonutChart = ({
   salesRevenue,
-  licenseRevenue,
   royaltyRevenue,
 }: {
   salesRevenue: number;
-  licenseRevenue: number;
   royaltyRevenue: number;
 }) => {
   const data = [
@@ -47,18 +143,13 @@ const RevenueDonutChart = ({
       color: "#a3f9d8",
     },
     {
-      name: "License Revenue",
-      value: licenseRevenue,
-      color: "#e6fc73",
-    },
-    {
       name: "Royalty Revenue",
       value: royaltyRevenue,
       color: "#ffcccc",
     },
   ].filter((item) => item.value > 0); // 0인 값은 제외
 
-  const total = salesRevenue + licenseRevenue + royaltyRevenue;
+  const total = salesRevenue + royaltyRevenue;
 
   const renderCustomLabel = ({
     cx,
@@ -185,6 +276,114 @@ const Dashboard = () => {
     );
   }, [currentUserAddress]);
 
+  // 내 작품들을 원본과 파생으로 구분
+  const originalWorks = useMemo(() => {
+    return myWorks.filter(
+      (work) => !work.parentId || work.parentId.length === 0
+    );
+  }, [myWorks]);
+
+  const derivativeWorks = useMemo(() => {
+    return myWorks.filter(
+      (work) => work.parentId !== null && work.parentId.length > 0
+    );
+  }, [myWorks]);
+
+  // 트리 구조 데이터
+  const [derivativeTrees, setDerivativeTrees] = useState<TreeNode[]>([]);
+  const [loadingTrees, setLoadingTrees] = useState(false);
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+
+  // Claim 이력 데이터
+  type ClaimTransaction = {
+    date: string;
+    type: string;
+    workTitle: string;
+    workPreview?: string;
+    amount: number;
+    status: "completed" | "pending" | "failed";
+  };
+  const [claimHistory, setClaimHistory] = useState<ClaimTransaction[]>([]);
+
+  // 재귀적으로 자식 작품들을 가져오는 함수
+  const fetchChildrenRecursively = async (
+    workId: string,
+    visited: Set<string> = new Set()
+  ): Promise<TreeNode[]> => {
+    if (visited.has(workId)) {
+      return []; // 순환 참조 방지
+    }
+    visited.add(workId);
+
+    try {
+      const response = await fetch(`/api/lineage/${workId}`);
+      const data = await response.json();
+
+      if (!data.children || data.children.length === 0) {
+        return [];
+      }
+
+      const children: TreeNode[] = [];
+      for (const child of data.children) {
+        const childNode: TreeNode = {
+          work: {
+            id: child.work_id,
+            title: child.title,
+            creator: child.creator,
+            preview_uri: child.preview_uri,
+            created_at: child.created_at,
+          },
+          children: await fetchChildrenRecursively(child.work_id, visited),
+        };
+        children.push(childNode);
+      }
+
+      return children;
+    } catch (error) {
+      console.error(`Error fetching children for ${workId}:`, error);
+      return [];
+    }
+  };
+
+  // 원본 작품들의 트리 구조 생성
+  useEffect(() => {
+    if (activeTab !== "derivatives" || originalWorks.length === 0) {
+      return;
+    }
+
+    const loadTrees = async () => {
+      setLoadingTrees(true);
+      try {
+        const trees: TreeNode[] = [];
+
+        for (const originalWork of originalWorks) {
+          const children = await fetchChildrenRecursively(originalWork.id);
+          if (children.length > 0) {
+            trees.push({
+              work: {
+                id: originalWork.id,
+                title: originalWork.metadata.title,
+                creator: originalWork.creator,
+                preview_uri: originalWork.preview_uri,
+              },
+              children,
+            });
+            // 루트 노드는 기본적으로 확장
+            setExpandedNodes((prev) => new Set(prev).add(originalWork.id));
+          }
+        }
+
+        setDerivativeTrees(trees);
+      } catch (error) {
+        console.error("Error loading derivative trees:", error);
+      } finally {
+        setLoadingTrees(false);
+      }
+    };
+
+    loadTrees();
+  }, [activeTab, originalWorks]);
+
   // 통계 계산
   const stats = useMemo(() => {
     const totalWorks = myWorks.length;
@@ -194,11 +393,8 @@ const Dashboard = () => {
 
     // 수익 계산 (임시)
     const salesRevenue = myWorks.reduce((sum, work) => sum + work.fee, 0);
-    const licenseRevenue = myWorks
-      .filter((work) => work.licenseOption)
-      .reduce((sum, work) => sum + (work.licenseOption?.price || 0), 0);
     const royaltyRevenue = 0; // TODO: 실제 로열티 수익 계산
-    const totalRevenue = salesRevenue + licenseRevenue + royaltyRevenue;
+    const totalRevenue = salesRevenue + royaltyRevenue;
 
     // 조회수 (임시)
     const totalViews = myWorks.length * 10; // TODO: 실제 조회수 API 연동
@@ -209,7 +405,6 @@ const Dashboard = () => {
       totalLicenses,
       totalDerivatives,
       salesRevenue,
-      licenseRevenue,
       royaltyRevenue,
       totalRevenue,
       totalViews,
@@ -232,11 +427,6 @@ const Dashboard = () => {
       id: "purchased",
       label: "Purchased",
       icon: <ShoppingBag className="w-4 h-4" />,
-    },
-    {
-      id: "licenses",
-      label: "Licenses",
-      icon: <FileText className="w-4 h-4" />,
     },
     {
       id: "derivatives",
@@ -333,7 +523,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        {/* <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -345,9 +535,9 @@ const Dashboard = () => {
               <FileText className="w-8 h-8 text-muted-foreground" />
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
-        <Card className="bg-gradient-to-br from-[#a3f9d8] to-[#e6fc73]">
+        <Card className="lg:col-span-2 bg-gradient-to-br from-[#a3f9d8] to-[#e6fc73]">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -492,7 +682,7 @@ const Dashboard = () => {
         <div className="lg:col-span-2 col-span-1">
           <div className="space-y-4">
             {/* 수익 요약 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Sales Revenue</CardTitle>
@@ -509,7 +699,7 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
-              <Card>
+              {/* <Card>
                 <CardHeader>
                   <CardTitle className="text-base">License Revenue</CardTitle>
                 </CardHeader>
@@ -522,7 +712,7 @@ const Dashboard = () => {
                     From license sales
                   </p>
                 </CardContent>
-              </Card>
+              </Card> */}
 
               <Card>
                 <CardHeader>
@@ -540,16 +730,95 @@ const Dashboard = () => {
               </Card>
             </div>
 
-            {/* 수익 상세 내역 (향후 구현) */}
+            {/* Claim 이력 */}
             <Card>
               <CardHeader>
                 <CardTitle>Transaction History</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <DollarSign className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>Transaction history will be displayed here</p>
-                  <p className="text-sm mt-2">Coming soon...</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4 font-semibold text-sm">
+                          Date
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm">
+                          Type
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm">
+                          Work
+                        </th>
+                        <th className="text-right py-3 px-4 font-semibold text-sm">
+                          Amount
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* TODO: 실제 claim 이력 데이터 연동 */}
+                      {claimHistory.length > 0 ? (
+                        claimHistory.map((transaction, index) => (
+                          <tr
+                            key={index}
+                            className="border-b hover:bg-muted/50 transition-colors"
+                          >
+                            <td className="py-3 px-4 text-sm">
+                              {new Date(transaction.date).toLocaleDateString()}
+                            </td>
+                            <td className="py-3 px-4 text-sm">
+                              <Badge variant="outline">
+                                {transaction.type}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4 text-sm">
+                              <div className="flex items-center gap-2">
+                                {transaction.workPreview && (
+                                  <img
+                                    src={transaction.workPreview}
+                                    alt={transaction.workTitle}
+                                    className="w-8 h-8 rounded object-cover"
+                                  />
+                                )}
+                                <span className="truncate max-w-[200px]">
+                                  {transaction.workTitle}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-sm text-right font-medium">
+                              {transaction.amount.toFixed(4)} SUI
+                            </td>
+                            <td className="py-3 px-4 text-sm">
+                              <Badge
+                                variant={
+                                  transaction.status === "completed"
+                                    ? "default"
+                                    : "secondary"
+                                }
+                              >
+                                {transaction.status}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="py-12 text-center text-muted-foreground"
+                          >
+                            <DollarSign className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                            <p>No transaction history yet</p>
+                            <p className="text-sm mt-2">
+                              Claim transactions will appear here
+                            </p>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>
@@ -559,44 +828,122 @@ const Dashboard = () => {
     </div>
   );
 
-  const renderMyWorks = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">My Works</h2>
-          <p className="text-muted-foreground">
-            {myWorks.length} {myWorks.length === 1 ? "work" : "works"} uploaded
-          </p>
-        </div>
-        <Button onClick={() => router.push("/upload")}>
-          <Upload className="w-4 h-4 mr-2" />
-          Upload New Work
-        </Button>
-      </div>
-
-      {myWorks.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {myWorks.map((work) => (
-            <ProductCard key={work.id} product={work} />
-          ))}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <Package className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h3 className="text-lg font-semibold mb-2">No works yet</h3>
-            <p className="text-muted-foreground mb-6">
-              Start creating and uploading your first work
+  const renderMyWorks = () => {
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">My Works</h2>
+            <p className="text-muted-foreground">
+              {myWorks.length} {myWorks.length === 1 ? "work" : "works"}{" "}
+              uploaded
             </p>
-            <Button onClick={() => router.push("/upload")}>
-              <Upload className="w-4 h-4 mr-2" />
-              Upload Your First Work
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+          </div>
+          <Button onClick={() => router.push("/upload")}>
+            <Upload className="w-4 h-4 mr-2" />
+            Upload New Work
+          </Button>
+        </div>
+
+        {myWorks.length > 0 ? (
+          <div className="space-y-8">
+            {/* 원본 작품 섹션 */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-xl font-semibold">Original Works</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {originalWorks.length}{" "}
+                    {originalWorks.length === 1 ? "work" : "works"}
+                  </p>
+                </div>
+              </div>
+              {originalWorks.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                  {originalWorks.map((work) => (
+                    <ProductCard key={work.id} product={work} />
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Package className="w-12 h-12 mx-auto mb-2 text-muted-foreground opacity-50" />
+                    <p className="text-muted-foreground">
+                      No original works yet
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* 파생 작품 섹션 */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-xl font-semibold">Derivative Works</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {derivativeWorks.length}{" "}
+                    {derivativeWorks.length === 1 ? "work" : "works"}
+                  </p>
+                </div>
+                {derivativeWorks.length > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      router.push("/upload");
+                      // TODO: 라이선스 선택 상태로 업로드 페이지 열기
+                    }}
+                  >
+                    <Layers className="w-4 h-4 mr-2" />
+                    Create New Derivative
+                  </Button>
+                )}
+              </div>
+              {derivativeWorks.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                  {derivativeWorks.map((work) => (
+                    <ProductCard key={work.id} product={work} />
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Layers className="w-12 h-12 mx-auto mb-2 text-muted-foreground opacity-50" />
+                    <p className="text-muted-foreground mb-4">
+                      No derivative works yet
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        router.push("/upload");
+                      }}
+                    >
+                      <Layers className="w-4 h-4 mr-2" />
+                      Create Derivative Work
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="py-16 text-center">
+              <Package className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <h3 className="text-lg font-semibold mb-2">No works yet</h3>
+              <p className="text-muted-foreground mb-6">
+                Start creating and uploading your first work
+              </p>
+              <Button onClick={() => router.push("/upload")}>
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Your First Work
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  };
 
   const renderPurchased = () => (
     <div className="space-y-6">
@@ -631,17 +978,28 @@ const Dashboard = () => {
     </div>
   );
 
-  const renderLicenses = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Purchased Licenses</h2>
-          <p className="text-muted-foreground">
-            {purchasedLicenses.length}{" "}
-            {purchasedLicenses.length === 1 ? "license" : "licenses"} purchased
-          </p>
-        </div>
-        {purchasedLicenses.length > 0 && (
+  const renderDerivatives = () => {
+    const toggleExpand = (workId: string) => {
+      setExpandedNodes((prev) => {
+        const next = new Set(prev);
+        if (next.has(workId)) {
+          next.delete(workId);
+        } else {
+          next.add(workId);
+        }
+        return next;
+      });
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Derivative Lineage</h2>
+            <p className="text-muted-foreground">
+              Tree view of works derived from your original works
+            </p>
+          </div>
           <Button
             onClick={() => {
               router.push("/upload");
@@ -649,217 +1007,125 @@ const Dashboard = () => {
             }}
           >
             <Layers className="w-4 h-4 mr-2" />
-            Create Derivative Work
+            Create New Derivative
           </Button>
-        )}
-      </div>
-
-      {purchasedLicenses.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {purchasedLicenses.map((work) => (
-            <Card key={work.id} className="overflow-hidden">
-              <CardContent className="p-0">
-                <div className="relative aspect-square">
-                  {work.preview_uri ? (
-                    <img
-                      src={work.preview_uri}
-                      alt={work.metadata.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-muted flex items-center justify-center">
-                      <FileText className="w-12 h-12 text-muted-foreground" />
-                    </div>
-                  )}
-                  <Badge className="absolute top-4 left-4">License NFT</Badge>
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold mb-2">{work.metadata.title}</h3>
-                  {work.licenseOption && (
-                    <div className="space-y-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Rule: </span>
-                        <span>{work.licenseOption.rule}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Price: </span>
-                        <span className="font-medium">
-                          {work.licenseOption.price} ETH
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Royalty: </span>
-                        <span>
-                          {work.licenseOption.royaltyRatio}% (Creator) /{" "}
-                          {100 - work.licenseOption.royaltyRatio}% (You)
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  <Button
-                    variant="outline"
-                    className="w-full mt-4"
-                    onClick={() => router.push(`/work/${work.id}`)}
-                  >
-                    View Original Work
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
         </div>
-      ) : (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <FileText className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h3 className="text-lg font-semibold mb-2">
-              No licenses purchased
-            </h3>
-            <p className="text-muted-foreground mb-6">
-              Purchase license NFTs to create derivative works
-            </p>
-            <Button onClick={() => router.push("/marketplace")}>
-              Browse Marketplace
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
 
-  const renderDerivatives = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">My Derivative Works</h2>
-          <p className="text-muted-foreground">
-            {myDerivatives.length}{" "}
-            {myDerivatives.length === 1
-              ? "derivative work"
-              : "derivative works"}
-          </p>
-        </div>
-        <Button
-          onClick={() => {
-            router.push("/upload");
-            // TODO: 라이선스 선택 상태로 업로드 페이지 열기
-          }}
-        >
-          <Layers className="w-4 h-4 mr-2" />
-          Create New Derivative
-        </Button>
-      </div>
-
-      {myDerivatives.length > 0 ? (
-        <div className="space-y-8">
-          {myDerivatives.map((derivative) => {
-            // 원본 작품 찾기
-            const originalWorks = mockWorks.filter((work) =>
-              derivative.parentId?.includes(work.id)
-            );
-
-            return (
-              <Card key={derivative.id}>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* 2차 창작물 */}
-                    <div>
-                      <h4 className="font-semibold mb-3 text-sm text-muted-foreground">
-                        DERIVATIVE WORK
-                      </h4>
-                      <div
-                        className="cursor-pointer"
-                        onClick={() => router.push(`/work/${derivative.id}`)}
-                      >
-                        {derivative.preview_uri ? (
-                          <img
-                            src={derivative.preview_uri}
-                            alt={derivative.metadata.title}
-                            className="w-full aspect-square rounded object-cover mb-2"
-                          />
-                        ) : (
-                          <div className="w-full aspect-square rounded bg-muted flex items-center justify-center mb-2">
-                            <Package className="w-12 h-12 text-muted-foreground" />
-                          </div>
-                        )}
-                        <p className="font-medium">
-                          {derivative.metadata.title}
+        {loadingTrees ? (
+          <Card>
+            <CardContent className="py-16 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">
+                Loading derivative trees...
+              </p>
+            </CardContent>
+          </Card>
+        ) : derivativeTrees.length > 0 ? (
+          <div className="space-y-6">
+            {derivativeTrees.map((tree) => (
+              <Card key={tree.work.id}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <span>Original Work</span>
+                    <Badge variant="outline">
+                      {tree.children.length}{" "}
+                      {tree.children.length === 1
+                        ? "derivative"
+                        : "derivatives"}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {/* 루트 노드 */}
+                    <div
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer border-2 border-primary/20 bg-primary/5"
+                      onClick={() => router.push(`/work/${tree.work.id}`)}
+                    >
+                      {tree.work.preview_uri ? (
+                        <img
+                          src={tree.work.preview_uri}
+                          alt={tree.work.title}
+                          className="w-16 h-16 rounded object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                          <Package className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate">
+                          {tree.work.title}
+                        </p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {tree.work.creator.slice(0, 12)}...
                         </p>
                       </div>
                     </div>
 
-                    {/* 화살표 */}
-                    <div className="flex items-center justify-center">
-                      <div className="text-4xl text-muted-foreground">→</div>
-                    </div>
-
-                    {/* 원본 작품들 */}
-                    <div>
-                      <h4 className="font-semibold mb-3 text-sm text-muted-foreground">
-                        ORIGINAL WORK{originalWorks.length > 1 ? "S" : ""}
-                      </h4>
-                      <div className="space-y-4">
-                        {originalWorks.map((original) => (
-                          <div
-                            key={original.id}
-                            className="cursor-pointer"
-                            onClick={() => router.push(`/work/${original.id}`)}
-                          >
-                            {original.preview_uri ? (
-                              <img
-                                src={original.preview_uri}
-                                alt={original.metadata.title}
-                                className="w-full aspect-square rounded object-cover mb-2"
-                              />
-                            ) : (
-                              <div className="w-full aspect-square rounded bg-muted flex items-center justify-center mb-2">
-                                <Package className="w-12 h-12 text-muted-foreground" />
-                              </div>
-                            )}
-                            <p className="font-medium text-sm">
-                              {original.metadata.title}
-                            </p>
-                          </div>
+                    {/* 자식 노드들 */}
+                    {tree.children.length > 0 && (
+                      <div className="mt-4 pl-4 border-l-2 border-muted">
+                        {tree.children.map((child) => (
+                          <TreeNodeComponent
+                            key={child.work.id}
+                            node={child}
+                            level={0}
+                            expandedNodes={expandedNodes}
+                            onToggleExpand={toggleExpand}
+                            router={router}
+                          />
                         ))}
                       </div>
-                    </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <Layers className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h3 className="text-lg font-semibold mb-2">
-              No derivative works yet
-            </h3>
-            <p className="text-muted-foreground mb-6">
-              Purchase a license NFT and create your first derivative work
-            </p>
-            <div className="flex gap-4 justify-center">
-              <Button
-                variant="outline"
-                onClick={() => router.push("/marketplace")}
-              >
-                Browse Licenses
-              </Button>
-              <Button
-                onClick={() => {
-                  router.push("/upload");
-                }}
-              >
-                <Layers className="w-4 h-4 mr-2" />
-                Create Derivative
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="py-16 text-center">
+              <Layers className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <h3 className="text-lg font-semibold mb-2">
+                No derivative works yet
+              </h3>
+              <p className="text-muted-foreground mb-6">
+                {originalWorks.length === 0
+                  ? "Upload original works first to see derivative lineage"
+                  : "No works have been derived from your original works yet"}
+              </p>
+              <div className="flex gap-4 justify-center">
+                {originalWorks.length === 0 ? (
+                  <Button onClick={() => router.push("/upload")}>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Original Work
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => router.push("/marketplace")}
+                    >
+                      Browse Licenses
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        router.push("/upload");
+                      }}
+                    >
+                      <Layers className="w-4 h-4 mr-2" />
+                      Create Derivative
+                    </Button>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  };
 
   const renderEarnings = () => (
     <div className="space-y-6">
@@ -889,7 +1155,7 @@ const Dashboard = () => {
           </Card>
 
           {/* 수익 요약 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Sales Revenue</CardTitle>
@@ -902,21 +1168,6 @@ const Dashboard = () => {
                 <p className="text-xs text-muted-foreground mt-2">
                   From {myWorks.length}{" "}
                   {myWorks.length === 1 ? "work" : "works"}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">License Revenue</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">
-                  {stats.licenseRevenue.toFixed(2)}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">ETH</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  From license sales
                 </p>
               </CardContent>
             </Card>
@@ -959,7 +1210,6 @@ const Dashboard = () => {
           <CardContent>
             <RevenueDonutChart
               salesRevenue={stats.salesRevenue}
-              licenseRevenue={stats.licenseRevenue}
               royaltyRevenue={stats.royaltyRevenue}
             />
           </CardContent>
@@ -976,8 +1226,6 @@ const Dashboard = () => {
         return renderMyWorks();
       case "purchased":
         return renderPurchased();
-      case "licenses":
-        return renderLicenses();
       case "derivatives":
         return renderDerivatives();
       case "earnings":
