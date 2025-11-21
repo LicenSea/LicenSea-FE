@@ -64,7 +64,7 @@ export const createWorkWithParent = (
 
       // licenseOptions field
       tx.pure.string(formData.licenseOption?.rule || ""), // rule
-      // tx.pure.u64(Number(formData.licenseOption?.price || 0) * 1_000_000_000), // price (SUI to MIST)
+      tx.pure.u64(Number(formData.licenseOption?.price || 0) * 1_000_000_000), // price (SUI to MIST)
       tx.pure.u64(formData.licenseOption?.royaltyRatio || 0), // royaltyRatio
 
       // other fields
@@ -102,38 +102,21 @@ export const services: WalrusService[] = [
   {
     id: "service1",
     name: "walrus.space",
-    publisherUrl: "/publisher1",
-    aggregatorUrl: "/aggregator1",
+    // 기존 "/publisher1" -> 실제 HTTPS 주소로 변경
+    publisherUrl: "https://publisher.walrus-testnet.walrus.space",
+    aggregatorUrl: "https://aggregator.walrus-testnet.walrus.space",
   },
   {
     id: "service2",
     name: "staketab.org",
-    publisherUrl: "/publisher2",
-    aggregatorUrl: "/aggregator2",
+    publisherUrl: "https://walrus-testnet-publisher.staketab.org",
+    aggregatorUrl: "https://walrus-testnet-aggregator.staketab.org",
   },
   {
     id: "service3",
-    name: "redundex.com",
-    publisherUrl: "/publisher3",
-    aggregatorUrl: "/aggregator3",
-  },
-  {
-    id: "service4",
     name: "nodes.guru",
-    publisherUrl: "/publisher4",
-    aggregatorUrl: "/aggregator4",
-  },
-  {
-    id: "service5",
-    name: "banansen.dev",
-    publisherUrl: "/publisher5",
-    aggregatorUrl: "/aggregator5",
-  },
-  {
-    id: "service6",
-    name: "everstake.one",
-    publisherUrl: "/publisher6",
-    aggregatorUrl: "/aggregator6",
+    publisherUrl: "https://walrus-testnet-publisher.nodes.guru",
+    aggregatorUrl: "https://walrus-testnet-aggregator.nodes.guru",
   },
 ];
 
