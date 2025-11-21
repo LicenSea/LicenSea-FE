@@ -64,7 +64,7 @@ export function Navbar() {
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-4">
             {/* TODO: zkLogin */}
-            <ConnectButton>LOGIN</ConnectButton>
+            <ConnectButton />
             {/* <Button className="bg-gradient-to-r from-[#a3f9d8] to-[#e6fc73] hover:from-[#a3f9d8] hover:to-[#f0e8e5] text-[#262d5c] border-0">
               Launch App
             </Button> */}
