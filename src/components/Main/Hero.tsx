@@ -2,8 +2,8 @@
 
 import { motion } from "framer-motion";
 import { Button } from "../ui/button";
-import { AnimatedLogo } from "./AnimatedLogo.tsx";
-import InfiniteExpansion from "./InfiniteExpansion.tsx";
+import { AnimatedLogo } from "./AnimatedLogo";
+import InfiniteExpansion from "./InfiniteExpansion";
 import { useRouter } from "next/navigation";
 
 export function Hero() {

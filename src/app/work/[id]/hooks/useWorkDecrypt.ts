@@ -94,7 +94,9 @@ async function decryptBlob(
   });
 
   // 6. Blob URL 생성
-  const blob = new Blob([decryptedFile], { type: workFileType });
+  const blob = new Blob([new Uint8Array(decryptedFile)], {
+    type: workFileType,
+  });
   return URL.createObjectURL(blob);
 }
 
@@ -211,11 +213,17 @@ export const useWorkDecrypt = (work: Work | null) => {
         }
 
         // 4. SessionKey 생성 또는 재사용
-        if (
-          !sessionKey ||
-          sessionKey.isExpired() ||
-          sessionKey.getAddress() !== currentAccount.address
-        ) {
+        const shouldCreateNewSessionKey = (
+          key: SessionKey | null
+        ): key is null => {
+          return (
+            !key ||
+            key.isExpired() ||
+            key.getAddress() !== currentAccount.address
+          );
+        };
+
+        if (shouldCreateNewSessionKey(sessionKey)) {
           const newSessionKey = await SessionKey.create({
             address: currentAccount.address,
             packageId,
