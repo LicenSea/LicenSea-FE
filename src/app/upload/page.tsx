@@ -237,13 +237,7 @@ export default function UploadPage() {
       // --- 1. create Work 트랜잭션 생성 및 서명 ---
       let createTx: Transaction;
       console.log("Step 1: Creating initial Work object...");
-      if (objectid) {
-        console.log("Creating a derivative work entry...");
-        createTx = createWorkWithParent(packageId, moduleName, formData);
-      } else {
-        console.log("Creating an original work entry...");
-        createTx = createWork(packageId, moduleName, formData);
-      }
+      createTx = createWork(packageId, moduleName, formData);
 
       // 트랜잭션 서명 (실행은 하지 않음)
       const signedTx = await signTransaction({ transaction: createTx });

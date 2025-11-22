@@ -33,7 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import type { LicenseOption, Work } from "@/types/work";
+import type { LicenseOption } from "@/types/work";
 import {
   Upload as UploadIcon,
   Image as ImageIcon,
@@ -48,7 +48,7 @@ export default function UploadPage() {
   const { mutateAsync: signTransaction } = useSignTransaction();
 
   const params = useParams();
-  const objectid = params?.id as string | undefined;
+  const objectid = params?.objectid as string | undefined;
 
   const [isUploading, setIsUploading] = useState(false);
   const [isDraggingThumbnail, setIsDraggingThumbnail] = useState(false);
@@ -73,33 +73,9 @@ export default function UploadPage() {
     isAdult: false,
   });
 
-  const [parentWork, setParentWork] = useState<Work | null>(null);
-  const [isLoadingParent, setIsLoadingParent] = useState(false);
-
   useEffect(() => {
     if (objectid) {
       setFormData((prev) => ({ ...prev, originWorks: objectid }));
-
-      // parent work 가져오기
-      async function loadParentWork() {
-        setIsLoadingParent(true);
-        try {
-          const response = await fetch(`/api/works/${objectid}`);
-          if (response.ok) {
-            const data = await response.json();
-            setParentWork(data.work);
-          } else {
-            console.error("Failed to fetch parent work");
-            setParentWork(null);
-          }
-        } catch (error) {
-          console.error("Error loading parent work:", error);
-          setParentWork(null);
-        } finally {
-          setIsLoadingParent(false);
-        }
-      }
-      loadParentWork();
     }
   }, [objectid]);
 
@@ -356,7 +332,7 @@ export default function UploadPage() {
         formData.originalFile,
         packageId,
         workObjectId,
-        "service1" // default service
+        formData.viewType
       );
       console.log("Encryption and upload complete.", walrusResponse);
 
@@ -607,25 +583,8 @@ export default function UploadPage() {
                   </div>
                   <div className="p-4 space-y-3">
                     {objectid ? (
-                      <div className="space-y-2">
-                        {isLoadingParent ? (
-                          <div className="text-sm text-gray-500 py-4 text-center">
-                            Loading parent work...
-                          </div>
-                        ) : parentWork ? (
-                          <div className="text-sm text-gray-900">
-                            <div className="text-gray-700">
-                              {parentWork.metadata.title}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              ID: {objectid}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-sm text-gray-500 py-4 text-center">
-                            This is a derivative work
-                          </div>
-                        )}
+                      <div className="text-sm text-gray-500 py-4 text-center">
+                        This is a derivative work based on: {objectid}
                       </div>
                     ) : (
                       <div className="text-sm text-gray-500 py-4 text-center">
@@ -905,7 +864,7 @@ export default function UploadPage() {
                           }
                           className="border-gray-300 focus:border-primary focus:ring-primary resize-none"
                         />
-                        <label>Price (SUI):</label>
+                        {/* <label>Price (SUI):</label>
                         <Input
                           type="number"
                           step="0.01"
@@ -918,7 +877,7 @@ export default function UploadPage() {
                             })
                           }
                           className="border-gray-300 focus:border-primary focus:ring-primary"
-                        />
+                        /> */}
                         <label>Creator Royalty (%):</label>
                         <Input
                           type="number"

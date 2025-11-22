@@ -15,26 +15,15 @@ export default function WorkPage() {
   const params = useParams();
   const id = params?.id as string;
 
+  const { work, loading } = useWorkData(id);
+  const { derivativeWorks } = useDerivativeWorks(work?.id || null);
   const {
-    work,
-    loading,
+    isDecrypting,
+    handleDecrypt,
     hasPaid,
-    setHasPaid,
     hasViewObject,
     decryptedImageUri,
-    setDecryptedImageUri,
-  } = useWorkData(id);
-  const { derivativeWorks } = useDerivativeWorks(work?.id || null);
-  const { isDecrypting, handleDecrypt } = useWorkDecrypt();
-
-  const handleDecryptClick = async () => {
-    if (!work) return;
-
-    await handleDecrypt(work, (decryptedUri) => {
-      setHasPaid(true);
-      setDecryptedImageUri(decryptedUri);
-    });
-  };
+  } = useWorkDecrypt(work);
 
   if (loading) {
     return (
@@ -68,7 +57,7 @@ export default function WorkPage() {
               work={work}
               hasPaid={hasPaid}
               isDecrypting={isDecrypting}
-              onDecrypt={handleDecryptClick}
+              onDecrypt={handleDecrypt}
             />
           </div>
         </div>

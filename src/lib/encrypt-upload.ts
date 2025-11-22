@@ -59,11 +59,10 @@ export const createWorkWithParent = (
       tx.pure.string(formData.originalFile?.type || ""), // file_type
       tx.pure.u64(formData.originalFile?.size || 0), // file_size
       tx.pure.vector("string", formData.tags), // tags
-      tx.pure.string(formData.category), // category
+      tx.pure.string(formData.category || ""), // category
 
       // licenseOptions field
       tx.pure.string(formData.licenseOption?.rule || ""), // rule
-      tx.pure.u64(Number(formData.licenseOption?.price || 0) * 1_000_000_000), // price (SUI to MIST)
       tx.pure.u64(formData.licenseOption?.royaltyRatio || 0), // royaltyRatio
 
       // other fields
