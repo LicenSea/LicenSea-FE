@@ -1,5 +1,4 @@
 export type LicenseOption = {
-  work_id: string;
   rule: string; // e.g. only use for Fanart
   price: number;
   royaltyRatio: number; // ex: 20 (내가 20, 라이센스 구매자가 80)
@@ -22,6 +21,7 @@ export type Work = {
   };
   fee: number;
   licenseOption: LicenseOption | null;
+  revoked?: boolean;
 
   // 추가 필드 (정렬, 필터링용)
   createdAt?: Date;

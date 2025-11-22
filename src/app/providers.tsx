@@ -1,0 +1,27 @@
+"use client";
+
+import { SuiClientProvider, WalletProvider } from "@mysten/dapp-kit";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { networkConfig } from "@/networkConfig";
+import { useState } from "react";
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 60 * 1000,
+          },
+        },
+      })
+  );
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
+        <WalletProvider autoConnect>{children}</WalletProvider>
+      </SuiClientProvider>
+    </QueryClientProvider>
+  );
+}

@@ -1,3 +1,5 @@
+"use client";
+
 import { Heart, Eye, Copy } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -5,7 +7,7 @@ import { Card, CardContent } from "../ui/card";
 import { useState } from "react";
 import type { Work } from "@/types/work";
 import { categories } from "@/data";
-import { useNavigate } from "react-router";
+import { useRouter } from "next/navigation";
 
 interface ProductCardProps {
   product: Work;
@@ -24,25 +26,17 @@ export function ProductCard({
   onViewDetails,
   onWishlistToggle,
 }: ProductCardProps) {
-  const nav = useNavigate();
+  const router = useRouter();
 
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-
-  const handleWishlistClick = () => {
-    setIsWishlisted(!isWishlisted);
-    onWishlistToggle?.(product.id);
-  };
-
-  const handleViewDetails = () => {
-    onViewDetails?.(product.id);
-  };
 
   const categoryLabel =
     categories.find((c) => c.id === product.metadata.category)?.label ||
     product.metadata.category;
   const hasLicense = product.licenseOption !== null;
   const isDerivative = product.parentId !== null && product.parentId.length > 0;
+  const isRevoked = product.revoked == true;
 
   return (
     <Card
@@ -52,7 +46,11 @@ export function ProductCard({
       // }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={() => nav(`/work/${product.id}`)}
+      onClick={() => {
+        if (!isRevoked) {
+          router.push(`/work/${product.id}`);
+        }
+      }}
     >
       <CardContent className="p-0">
         {/* Image Container */}
@@ -62,12 +60,21 @@ export function ProductCard({
               src={product.preview_uri}
               alt={product.metadata.title}
               className={`w-full h-60 object-cover transition-transform duration-300${
-                product.metadata.isAdult ? " blur-md" : ""
+                // product.metadata.isAdult ? " blur-md" : ""
+                product.metadata.isAdult ? " " : ""
               }`}
             />
           ) : (
             <div className="w-full h-60 bg-black flex justify-center items-center text-white">
               No Preview Available
+            </div>
+          )}
+          {/* Revoked Overlay */}
+          {isRevoked && (
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <div className="text-white text-xl font-semibold">
+                Not Available
+              </div>
             </div>
           )}
 
@@ -104,9 +111,7 @@ export function ProductCard({
 
           {/* 오른쪽 상단 */}
           <div className="absolute top-4 right-4 flex gap-2">
-            {product.metadata.isAdult && (
-              <Badge variant="destructive">18+</Badge>
-            )}
+            {isRevoked && <Badge variant="destructive">Revoked</Badge>}
           </div>
         </div>
 
@@ -163,14 +168,25 @@ export function ProductCard({
           {/* Stats and Price */}
           <div className="font-galmuri flex items-center justify-between mt-3 pt-3 gap-2">
             {/* VIEW button */}
-            <Button className="flex-1" variant="outline" type="button">
+            <Button
+              disabled={product.revoked}
+              className="flex-1"
+              variant="outline"
+              type="button"
+            >
               <span>
-                VIEW {product.fee > 0 ? `${product.fee} SUI` : "FREE"}
+                {product.revoked ? (
+                  <span>REVOKED</span>
+                ) : (
+                  <span>
+                    VIEW {product.fee > 0 ? `${product.fee} SUI` : "FREE"}
+                  </span>
+                )}
               </span>
             </Button>
 
             {/* BUY LICENSE NFT button */}
-            {hasLicense && (
+            {/* {hasLicense && (
               <Button
                 variant="outline"
                 className="flex-1 relative group bg-[#ffcccc] hover:bg-[#ffcccc]/70"
@@ -181,11 +197,11 @@ export function ProductCard({
                 </span>
                 <span className="absolute left-0 w-full flex justify-center items-center top-0 h-full opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-150">
                   {product.licenseOption?.price !== undefined
-                    ? `${product.licenseOption.price} ETH`
+                    ? `${product.licenseOption.price} SUI`
                     : ""}
                 </span>
               </Button>
-            )}
+            )} */}
           </div>
         </div>
       </CardContent>

@@ -1,3 +1,5 @@
+"use client";
+
 import { ChevronDown, Filter, X } from "lucide-react";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
@@ -242,7 +244,7 @@ export function FilterPanel({
         </Collapsible>
 
         {/* Tags */}
-        <Collapsible
+        {/* <Collapsible
           open={openSections.tags}
           onOpenChange={() => toggleSection("tags")}
         >
@@ -277,7 +279,7 @@ export function FilterPanel({
               </div>
             ))}
           </CollapsibleContent>
-        </Collapsible>
+        </Collapsible> */}
 
         {/* Price Range */}
         <Collapsible
@@ -304,14 +306,14 @@ export function FilterPanel({
               className="w-full"
             />
             <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>${filters.feeRange[0]}</span>
-              <span>${filters.feeRange[1]}</span>
+              <span>{filters.feeRange[0]} SUI</span>
+              <span>{filters.feeRange[1]} SUI</span>
             </div>
           </CollapsibleContent>
         </Collapsible>
 
         {/* Content Options */}
-        <Collapsible
+        {/* <Collapsible
           open={openSections.content}
           onOpenChange={() => toggleSection("content")}
         >
@@ -375,7 +377,7 @@ export function FilterPanel({
                 >
                   All
                 </Button>
-                {/* <Button
+                <Button
                   variant={
                     filters.hasLicenseOptions === false ? "default" : "outline"
                   }
@@ -384,7 +386,7 @@ export function FilterPanel({
                   className="flex-1"
                 >
                   Not for Sale
-                </Button> */}
+                </Button>
                 <Button
                   variant={
                     filters.hasLicenseOptions === true ? "default" : "outline"
@@ -398,7 +400,7 @@ export function FilterPanel({
               </div>
             </div>
           </CollapsibleContent>
-        </Collapsible>
+        </Collapsible> */}
       </CardContent>
     </Card>
   );
