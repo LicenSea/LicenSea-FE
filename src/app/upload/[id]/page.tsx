@@ -7,7 +7,7 @@ import {
   createWorkWithParent,
   handlePublish,
   sealAndUpload,
-} from "@/lib/encrypt-upload";
+} from "@/app/upload/hooks/encrypt-upload";
 import {
   useSuiClient,
   useSignTransaction,
@@ -40,6 +40,7 @@ import {
   X,
   Loader2,
 } from "lucide-react";
+import { useWorkData } from "@/app/work/[id]/hooks/useWorkData";
 
 export default function UploadPage() {
   const suiClient = useSuiClient();
@@ -48,7 +49,9 @@ export default function UploadPage() {
   const { mutateAsync: signTransaction } = useSignTransaction();
 
   const params = useParams();
-  const objectid = params?.objectid as string | undefined;
+  const objectid = params?.id as string | undefined;
+  const { work: parentWork, loading: parentWorkLoading } =
+    useWorkData(objectid);
 
   const [isUploading, setIsUploading] = useState(false);
   const [isDraggingThumbnail, setIsDraggingThumbnail] = useState(false);
@@ -75,7 +78,7 @@ export default function UploadPage() {
 
   useEffect(() => {
     if (objectid) {
-      setFormData((prev) => ({ ...prev, originWorks: objectid }));
+      setFormData((prev) => ({ ...prev, parentWork: objectid }));
     }
   }, [objectid]);
 
@@ -583,9 +586,50 @@ export default function UploadPage() {
                   </div>
                   <div className="p-4 space-y-3">
                     {objectid ? (
-                      <div className="text-sm text-gray-500 py-4 text-center">
-                        This is a derivative work based on: {objectid}
-                      </div>
+                      parentWorkLoading ? (
+                        <div className="text-sm text-gray-500 py-4 text-center">
+                          Loading origin work...
+                        </div>
+                      ) : parentWork ? (
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Title</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {parentWork.metadata.title}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">
+                              Object ID
+                            </p>
+                            <p className="text-sm font-mono text-gray-700 break-all">
+                              {objectid}
+                            </p>
+                          </div>
+                          {parentWork.licenseOption && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">
+                                License Option
+                              </p>
+                              <div className="text-sm text-gray-900 space-y-1">
+                                <p className="font-medium">
+                                  Rule: {parentWork.licenseOption.rule}
+                                </p>
+                                {parentWork.licenseOption.royaltyRatio > 0 && (
+                                  <p className="text-gray-600">
+                                    Creator Royalty:{" "}
+                                    {parentWork.licenseOption.royaltyRatio}%
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-500 py-4 text-center">
+                          Origin work not found: {objectid}
+                        </div>
+                      )
                     ) : (
                       <div className="text-sm text-gray-500 py-4 text-center">
                         This is original Work

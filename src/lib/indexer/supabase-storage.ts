@@ -158,7 +158,9 @@ export async function getWorkLineage(workId: string) {
         work_id,
         title,
         creator,
-        created_at
+        created_at,
+        preview_uri,
+        revoked
       )
     `
     )
@@ -178,7 +180,9 @@ export async function getWorkLineage(workId: string) {
         work_id,
         title,
         creator,
-        created_at
+        created_at,
+        preview_uri,
+        revoked
       )
     `
     )
@@ -366,4 +370,88 @@ export async function claimRoyalty(workId: string, amount: number) {
   }
 
   return { success: true, claimed: amount, remaining: claimable - amount };
+}
+
+/**
+ * Revenue 트랜잭션 저장 (sales 또는 royalty)
+ */
+export async function saveRevenueTransaction(data: {
+  workId: string;
+  recipientAddress: string;
+  amount: number; // MIST 단위
+  revenueType: "sales" | "royalty";
+  transactionDigest: string;
+}) {
+  if (!supabase) {
+    console.warn("Supabase not configured. Skipping revenue transaction save.");
+    return;
+  }
+
+  const { error } = await supabase.from("revenue_transactions").insert({
+    work_id: data.workId,
+    recipient_address: data.recipientAddress,
+    amount: data.amount,
+    revenue_type: data.revenueType,
+    transaction_digest: data.transactionDigest,
+  });
+
+  if (error) {
+    console.error("Error saving revenue transaction:", error);
+    throw error;
+  }
+}
+
+/**
+ * 특정 creator의 revenue 트랜잭션 조회 (sales와 royalty 구분)
+ */
+export async function getRevenueTransactionsByCreator(creatorAddress: string) {
+  if (!supabase) {
+    console.warn("Supabase not configured. Returning empty transactions.");
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("revenue_transactions")
+    .select(
+      `
+      *,
+      works (
+        work_id,
+        title,
+        creator
+      )
+    `
+    )
+    .eq("recipient_address", creatorAddress)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching revenue transactions:", error);
+    throw error;
+  }
+
+  return data || [];
+}
+
+/**
+ * 특정 creator의 작품들 조회
+ */
+export async function getWorksByCreator(creatorAddress: string) {
+  if (!supabase) {
+    console.warn("Supabase not configured. Returning empty works.");
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("works")
+    .select("*")
+    .eq("creator", creatorAddress)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching works by creator:", error);
+    throw error;
+  }
+
+  return data || [];
 }

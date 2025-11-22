@@ -296,6 +296,11 @@ export const useWorkDecrypt = (work: Work | null) => {
       return;
     }
 
+    // 이미 복호화가 완료되었거나 진행 중이면 실행하지 않음
+    if (hasPaid || hasViewObject || isDecrypting || decryptedImageUri) {
+      return;
+    }
+
     // 무료 작품 처리
     if (work.fee === 0) {
       setHasPaid(true);

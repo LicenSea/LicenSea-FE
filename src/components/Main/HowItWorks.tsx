@@ -7,7 +7,8 @@ const steps = [
   {
     icon: Sparkles,
     title: "Create",
-    description: "Mint your dataset or artwork as a License NFT.",
+    description:
+      "Create your unique creative work using the Walrus Seal protocol.",
     number: "01",
   },
   {

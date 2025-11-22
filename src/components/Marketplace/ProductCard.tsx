@@ -31,20 +31,12 @@ export function ProductCard({
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
-  const handleWishlistClick = () => {
-    setIsWishlisted(!isWishlisted);
-    onWishlistToggle?.(product.id);
-  };
-
-  const handleViewDetails = () => {
-    onViewDetails?.(product.id);
-  };
-
   const categoryLabel =
     categories.find((c) => c.id === product.metadata.category)?.label ||
     product.metadata.category;
   const hasLicense = product.licenseOption !== null;
   const isDerivative = product.parentId !== null && product.parentId.length > 0;
+  const isRevoked = product.revoked == true;
 
   return (
     <Card
@@ -54,7 +46,11 @@ export function ProductCard({
       // }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={() => router.push(`/work/${product.id}`)}
+      onClick={() => {
+        if (!isRevoked) {
+          router.push(`/work/${product.id}`);
+        }
+      }}
     >
       <CardContent className="p-0">
         {/* Image Container */}
@@ -71,6 +67,14 @@ export function ProductCard({
           ) : (
             <div className="w-full h-60 bg-black flex justify-center items-center text-white">
               No Preview Available
+            </div>
+          )}
+          {/* Revoked Overlay */}
+          {isRevoked && (
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <div className="text-white text-xl font-semibold">
+                Not Available
+              </div>
             </div>
           )}
 
@@ -107,9 +111,7 @@ export function ProductCard({
 
           {/* 오른쪽 상단 */}
           <div className="absolute top-4 right-4 flex gap-2">
-            {/* {product.metadata.isAdult && (
-              <Badge variant="destructive">18+</Badge>
-            )} */}
+            {isRevoked && <Badge variant="destructive">Revoked</Badge>}
           </div>
         </div>
 
@@ -166,9 +168,20 @@ export function ProductCard({
           {/* Stats and Price */}
           <div className="font-galmuri flex items-center justify-between mt-3 pt-3 gap-2">
             {/* VIEW button */}
-            <Button className="flex-1" variant="outline" type="button">
+            <Button
+              disabled={product.revoked}
+              className="flex-1"
+              variant="outline"
+              type="button"
+            >
               <span>
-                VIEW {product.fee > 0 ? `${product.fee} SUI` : "FREE"}
+                {product.revoked ? (
+                  <span>REVOKED</span>
+                ) : (
+                  <span>
+                    VIEW {product.fee > 0 ? `${product.fee} SUI` : "FREE"}
+                  </span>
+                )}
               </span>
             </Button>
 

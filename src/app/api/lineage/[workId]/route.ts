@@ -3,10 +3,10 @@ import { getWorkLineage } from "@/lib/indexer/supabase-storage";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { workId: string } }
+  { params }: { params: Promise<{ workId: string }> }
 ) {
   try {
-    const { workId } = params;
+    const { workId } = await params;
     const lineage = await getWorkLineage(workId);
 
     return NextResponse.json(lineage);

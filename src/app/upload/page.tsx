@@ -7,7 +7,7 @@ import {
   createWorkWithParent,
   handlePublish,
   sealAndUpload,
-} from "@/lib/encrypt-upload";
+} from "@/app/upload/hooks/encrypt-upload";
 import {
   useSuiClient,
   useSignTransaction,

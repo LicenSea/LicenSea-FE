@@ -39,7 +39,7 @@ export const OverviewTab = ({
 
       {/* 통계 카드들 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card className="lg:col-span-2">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -53,7 +53,7 @@ export const OverviewTab = ({
           </CardContent>
         </Card>
 
-        <Card>
+        {/* <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -65,7 +65,7 @@ export const OverviewTab = ({
               <ShoppingBag className="w-8 h-8 text-muted-foreground" />
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
         <Card className="lg:col-span-2 bg-gradient-to-br from-[#a3f9d8] to-[#e6fc73]">
           <CardContent className="pt-6">
@@ -89,7 +89,7 @@ export const OverviewTab = ({
 
       {/* 최근 활동 */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Recent Works</CardTitle>
           </CardHeader>
@@ -149,7 +149,7 @@ export const OverviewTab = ({
           </CardContent>
         </Card>
 
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle>Recent Purchases</CardTitle>
           </CardHeader>
@@ -207,7 +207,7 @@ export const OverviewTab = ({
               </div>
             )}
           </CardContent>
-        </Card>
+        </Card> */}
 
         <div className="lg:col-span-2 col-span-1">
           <div className="space-y-4">
@@ -246,7 +246,7 @@ export const OverviewTab = ({
             </div>
 
             {/* Claim 이력 */}
-            <Card>
+            {/* <Card>
               <CardHeader>
                 <CardTitle>Transaction History</CardTitle>
               </CardHeader>
@@ -335,7 +335,7 @@ export const OverviewTab = ({
                   </table>
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
         </div>
       </div>

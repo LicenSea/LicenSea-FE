@@ -1,4 +1,5 @@
 import { Transaction } from "@mysten/sui/transactions";
+import { REGISTRY_OBJECT_ID } from "@/constants";
 
 export const payView = (
   packageId: string,
@@ -13,7 +14,11 @@ export const payView = (
 
   tx.moveCall({
     target: `${packageId}::${moduleName}::pay`,
-    arguments: [coin, tx.object(workId)],
+    arguments: [
+      tx.object(REGISTRY_OBJECT_ID), // registry 추가
+      coin,
+      tx.object(workId),
+    ],
   });
 
   return tx;

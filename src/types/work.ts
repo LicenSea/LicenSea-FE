@@ -21,6 +21,7 @@ export type Work = {
   };
   fee: number;
   licenseOption: LicenseOption | null;
+  revoked?: boolean;
 
   // 추가 필드 (정렬, 필터링용)
   createdAt?: Date;

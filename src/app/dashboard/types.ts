@@ -12,6 +12,8 @@ export type TreeNode = {
     creator: string;
     preview_uri?: string;
     created_at?: string;
+    revoked?: boolean;
+    capId?: string;
   };
   children: TreeNode[];
 };

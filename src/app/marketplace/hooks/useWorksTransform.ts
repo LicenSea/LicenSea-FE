@@ -28,11 +28,12 @@ export const useWorksTransform = (fetchedWorks: any[]) => {
             ? {
                 rule: work.license_rule,
                 price: Number(work.license_price || 0) / 1_000_000_000,
-                royaltyRatio: Number(work.royalty_ratio || 0),
+                royaltyRatio: Number(work.royalty_ratio) / 100 || 0, // 100 단위를 퍼센트로 변환 (1000 -> 10%)
               }
             : null,
           parentId: work.parent_id ? [work.parent_id] : null,
           blob_uri: work.blob_id || "",
+          revoked: work.revoked,
         };
       })
       .filter((work): work is Work => work !== null);

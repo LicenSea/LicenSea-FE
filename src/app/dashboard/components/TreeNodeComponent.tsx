@@ -1,6 +1,7 @@
-import { Package, ChevronRight, ChevronDown } from "lucide-react";
+import { Package, ChevronRight, ChevronDown, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { TreeNode } from "../types";
+import { Button } from "@/components/ui/button";
 
 interface TreeNodeComponentProps {
   node: TreeNode;
@@ -10,6 +11,10 @@ interface TreeNodeComponentProps {
   router: {
     push: (href: string) => void;
   };
+  onRevoke?: (workId: string, capId: string) => void;
+  isDirectChild?: boolean; // 직속 파생작인지 확인
+  currentUser?: string; // 현재 사용자 주소
+  capId?: string;
 }
 
 export const TreeNodeComponent = ({
@@ -18,10 +23,16 @@ export const TreeNodeComponent = ({
   expandedNodes,
   onToggleExpand,
   router,
+  onRevoke,
+  isDirectChild = false,
+  currentUser,
+  capId,
 }: TreeNodeComponentProps) => {
   const isExpanded = expandedNodes.has(node.work.id);
   const hasChildren = node.children.length > 0;
   const indent = level * 24;
+  const isMyWork = currentUser && node.work.creator === currentUser; // 내가 만든 작품인지 확인
+  const canRevoke = isDirectChild && capId && !node.work.revoked; // 직속 파생작이고 Cap이 있고 아직 revoke되지 않은 경우
 
   return (
     <div className="mb-2">
@@ -59,7 +70,13 @@ export const TreeNodeComponent = ({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <p className="font-medium truncate">{node.work.title}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-medium truncate">{node.work.title}</p>
+              {isMyWork && <Badge variant="default">My Work</Badge>}
+              {node.work.revoked && (
+                <Badge variant="destructive">Revoked</Badge>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground truncate">
               {node.work.creator.slice(0, 8)}...
             </p>
@@ -68,6 +85,19 @@ export const TreeNodeComponent = ({
             <Badge variant="secondary" className="flex-shrink-0">
               {node.children.length}
             </Badge>
+          )}
+          {canRevoke && onRevoke && (
+            <Button
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRevoke(node.work.id, capId!);
+              }}
+              className="flex-shrink-0"
+            >
+              <X className="w-4 h-4 mr-1" />
+              Revoke
+            </Button>
           )}
         </div>
       </div>

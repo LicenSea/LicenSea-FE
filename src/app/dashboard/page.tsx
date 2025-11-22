@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Navbar } from "@/components/Navbar/Navbar";
 import { mockWorks } from "@/data";
 import { DashboardTabs } from "./components/DashboardTabs";
@@ -12,41 +12,69 @@ import { EarningsTab } from "./components/EarningsTab";
 import { useDashboardStats } from "./hooks/useDashboardStats";
 import { useDerivativeTrees } from "./hooks/useDerivativeTrees";
 import type { TabType } from "./types";
+import { Work } from "@/types/work";
+import { useRouter } from "next/navigation";
+import { useCurrentAccount } from "@mysten/dapp-kit";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
+  const [myWorks, setMyWorks] = useState<Work[]>([]);
+  const [purchasedWorks, setPurchasedWorks] = useState<Work[]>([]);
+  const [loading, setLoading] = useState(true);
+  const currentAccount = useCurrentAccount();
 
-  // TODO: 실제로는 연결된 지갑 주소를 사용
-  const currentUserAddress =
-    "0xded158cc74a375be0a0e4506d18801bb2355abb38a7d0b4168452a20a32b96d9";
+  // 내 작품들 로드
+  useEffect(() => {
+    async function loadMyWorks() {
+      if (!currentAccount?.address) {
+        setLoading(false);
+        return;
+      }
 
-  // 내가 업로드한 작품들
-  const myWorks = useMemo(() => {
-    return mockWorks.filter((work) => work.creator === currentUserAddress);
-  }, [currentUserAddress]);
+      try {
+        const response = await fetch(
+          `/api/works/my?creator=${currentAccount.address}`
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch my works");
+        }
+        const data = await response.json();
+        setMyWorks(data.works || []);
+      } catch (error) {
+        console.error("Error loading my works:", error);
+        setMyWorks([]);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-  // 내가 구매한 작품들 (VIEW 버튼을 누른 작품들 - 실제로는 구매 내역에서 가져옴)
-  // TODO: 실제 구매 내역 API 연동
-  const purchasedWorks = useMemo(() => {
-    // 임시로 fee가 0이 아닌 작품들을 구매한 것으로 가정
-    return mockWorks.filter((work) => work.fee > 0);
-  }, []);
+    loadMyWorks();
+  }, [currentAccount]);
 
-  // 내가 구매한 라이선스 NFT들
-  const purchasedLicenses = useMemo(() => {
-    // TODO: 실제 라이선스 구매 내역 API 연동
-    return mockWorks.filter((work) => work.licenseOption !== null);
-  }, []);
+  // 내가 구매한 작품들 로드 (View 객체 소유)
+  useEffect(() => {
+    async function loadPurchasedWorks() {
+      if (!currentAccount?.address) {
+        return;
+      }
 
-  // 내가 만든 2차 창작물들
-  const myDerivatives = useMemo(() => {
-    return mockWorks.filter(
-      (work) =>
-        work.parentId !== null &&
-        work.parentId.length > 0 &&
-        work.creator === currentUserAddress
-    );
-  }, [currentUserAddress]);
+      try {
+        const response = await fetch(
+          `/api/work/purchased?owner=${currentAccount.address}`
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch purchased works");
+        }
+        const data = await response.json();
+        setPurchasedWorks(data.works || []);
+      } catch (error) {
+        console.error("Error loading purchased works:", error);
+        setPurchasedWorks([]);
+      }
+    }
+
+    loadPurchasedWorks();
+  }, [currentAccount]);
 
   // 내 작품들을 원본과 파생으로 구분
   const originalWorks = useMemo(() => {
@@ -60,6 +88,11 @@ const Dashboard = () => {
       (work) => work.parentId !== null && work.parentId.length > 0
     );
   }, [myWorks]);
+
+  const myDerivatives = derivativeWorks;
+  const purchasedLicenses = useMemo(() => {
+    return purchasedWorks.filter((work) => work.licenseOption !== null);
+  }, [purchasedWorks]);
 
   // 통계 계산
   const stats = useDashboardStats({
@@ -76,12 +109,34 @@ const Dashboard = () => {
       originalWorks,
     });
 
+  if (!currentAccount) {
+    return (
+      <div className="min-w-screen min-h-screen">
+        <Navbar />
+        <div className="container mx-auto px-4 py-20 text-center">
+          <p className="text-muted-foreground">Please connect your wallet</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-w-screen min-h-screen">
+        <Navbar />
+        <div className="container mx-auto px-4 py-20 text-center">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   const renderTabContent = () => {
     switch (activeTab) {
       case "overview":
         return (
           <OverviewTab
-            currentUserAddress={currentUserAddress}
+            currentUserAddress={currentAccount.address}
             myWorks={myWorks}
             purchasedWorks={purchasedWorks}
             stats={stats}
@@ -113,7 +168,7 @@ const Dashboard = () => {
       default:
         return (
           <OverviewTab
-            currentUserAddress={currentUserAddress}
+            currentUserAddress={currentAccount.address}
             myWorks={myWorks}
             purchasedWorks={purchasedWorks}
             stats={stats}

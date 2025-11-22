@@ -5,11 +5,13 @@ import type { Work } from "@/types/work";
 interface UseDerivativeTreesProps {
   activeTab: string;
   originalWorks: Work[];
+  capMap?: Map<string, string>;
 }
 
 export const useDerivativeTrees = ({
   activeTab,
   originalWorks,
+  capMap = new Map(),
 }: UseDerivativeTreesProps) => {
   const [derivativeTrees, setDerivativeTrees] = useState<TreeNode[]>([]);
   const [loadingTrees, setLoadingTrees] = useState(false);
@@ -42,6 +44,8 @@ export const useDerivativeTrees = ({
             creator: child.creator,
             preview_uri: child.preview_uri,
             created_at: child.created_at,
+            revoked: child.revoked || false,
+            capId: capMap.get(child.work_id),
           },
           children: await fetchChildrenRecursively(child.work_id, visited),
         };
@@ -75,6 +79,8 @@ export const useDerivativeTrees = ({
                 title: originalWork.metadata.title,
                 creator: originalWork.creator,
                 preview_uri: originalWork.preview_uri,
+                revoked: originalWork.revoked || false,
+                capId: capMap.get(originalWork.id),
               },
               children,
             });
@@ -92,7 +98,7 @@ export const useDerivativeTrees = ({
     };
 
     loadTrees();
-  }, [activeTab, originalWorks]);
+  }, [activeTab, originalWorks.length]);
 
   const toggleExpand = (workId: string) => {
     setExpandedNodes((prev) => {

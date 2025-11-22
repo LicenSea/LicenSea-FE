@@ -2,6 +2,7 @@ import { SealClient } from "@mysten/seal";
 import { SuiClient } from "@mysten/sui/client";
 import { fromHex, toHex } from "@mysten/sui/utils";
 import { Transaction } from "@mysten/sui/transactions";
+import { REGISTRY_OBJECT_ID } from "@/constants";
 
 type WalrusService = {
   id: string;
@@ -20,6 +21,7 @@ export const createWork = (
   tx.moveCall({
     target: `${packageId}::${moduleName}::create_work_entry`,
     arguments: [
+      tx.object(REGISTRY_OBJECT_ID), // work registry
       // metadata field
       tx.pure.string(formData.title),
       tx.pure.string(formData.description),
@@ -30,7 +32,7 @@ export const createWork = (
 
       // licenseOptions field
       tx.pure.string(formData.licenseOption?.rule || ""), // rule
-      tx.pure.u64(formData.licenseOption?.royaltyRatio || 0), // royaltyRatio
+      tx.pure.u64((formData.licenseOption?.royaltyRatio || 0) * 100), // royaltyRatio
 
       // other fields
       tx.pure.u64(
@@ -52,7 +54,8 @@ export const createWorkWithParent = (
   tx.moveCall({
     target: `${packageId}::${moduleName}::create_work_with_parent_entry`,
     arguments: [
-      tx.sharedObjectRef(formData.parentWork), // parent work id
+      tx.object(REGISTRY_OBJECT_ID), // work registry
+      tx.object(formData.parentWork), // parent work
       // metadata field
       tx.pure.string(formData.title),
       tx.pure.string(formData.description),
@@ -63,10 +66,7 @@ export const createWorkWithParent = (
 
       // licenseOptions field
       tx.pure.string(formData.licenseOption?.rule || ""), // rule
-      tx.pure.u64(formData.licenseOption?.royaltyRatio || 0), // royaltyRatio
-
-      // other fields
-      tx.pure.vector("address", formData.originWorks), // parentId
+      tx.pure.u64((formData.licenseOption?.royaltyRatio || 0) * 100), // royaltyRatio
 
       // fee (작품 보기 수수료)
       tx.pure.u64(
@@ -177,7 +177,7 @@ export const sealAndUpload = async (
     `${getPublisherUrl(`/v1/blobs?epochs=${NUM_EPOCH}`)}`,
     {
       method: "PUT",
-      body: encryptedBytes,
+      body: encryptedBytes as any,
     }
   );
 
