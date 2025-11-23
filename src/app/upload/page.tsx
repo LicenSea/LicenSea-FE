@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   createWork,
   createWorkWithParent,
@@ -46,6 +46,7 @@ export default function UploadPage() {
   const packageId = useNetworkVariable("packageId");
   const currentAccount = useCurrentAccount();
   const { mutateAsync: signTransaction } = useSignTransaction();
+  const router = useRouter();
 
   const params = useParams();
   const objectid = params?.objectid as string | undefined;
@@ -377,6 +378,7 @@ export default function UploadPage() {
 
       console.log("Association successful:", publishResult);
       alert(`Upload process complete! Digest: ${publishResult.digest}`);
+      router.push(`/work/${workObjectId}`);
     } catch (error) {
       console.error("Upload process failed:", error);
       alert(

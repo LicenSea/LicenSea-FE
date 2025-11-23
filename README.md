@@ -1,73 +1,47 @@
-# React + TypeScript + Vite
+# **LicenSea**
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+[https://licen-sea-fe.vercel.app/](https://licen-sea-fe.vercel.app/)
 
-Currently, two official plugins are available:
+**Turn your fan art into earnings — with automatic royalty sharing to the original creator.**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+LicenSea is an on-chain licensing marketplace where creators publish works and define their own royalty rules.
+Fans can view or purchase access to these works, and they can also create legitimate derivative works inspired by them, which automatically share revenue with the original creator. Assets are stored through Walrus, access is protected by Seal, and all licensing logic runs on Sui Move smart contracts.
 
-## React Compiler
+Our goal is to make derivative creativity fair and transparent, and to build an ecosystem where fans, creators, and secondary creators can collaborate without conflict.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## **Features**
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Publish original works with custom royalty rules
+- Free or paid access to content
+- Create legitimate derivative works with automatic royalty sharing
+- On-chain licensing logic enforced by Sui Move
+- Storage via Walrus + encrypted access via Seal
+- Transparent revenue and attribution flow
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## **How It Works**
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+1. A creator uploads a work via Walrus and sets royalty rules.
+2. Fans can view or purchase access.
+3. Fans can create derivative works under those rules.
+4. Revenue automatically flows back to the original creator.
+5. All logic is verified and enforced on-chain.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## **Tech Stack**
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+**Blockchain:** Sui Move, Walrus, Seal
+**Frontend:** Next.js, React, TailwindCSS
+**Infra:** Vercel, Sui RPC, Walrus Gateway
+
+---
+
+## **Roadmap**
+
+- Support for derivative works with multiple parent sources
+- Age-restricted access for adult content (verified addresses only)
+- Subscription-based creator support
