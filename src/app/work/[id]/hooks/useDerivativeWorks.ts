@@ -20,7 +20,7 @@ export const useDerivativeWorks = (workId: string | null) => {
         const response = await fetch("/api/works");
         const data = await response.json();
         const derivatives = (data.works || []).filter(
-          (w: Work) => w.parentId && w.parentId.includes(workId)
+          (w: any) => w.parent_id && w.parent_id.includes(workId)
         );
         setDerivativeWorks(derivatives);
       } catch (error) {

@@ -10,6 +10,7 @@ import { useWorkData } from "./hooks/useWorkData";
 import { useDerivativeWorks } from "./hooks/useDerivativeWorks";
 import { useWorkDecrypt } from "./hooks/useWorkDecrypt";
 import { useParams } from "next/navigation";
+import { useWorksTransform } from "@/app/marketplace/hooks/useWorksTransform";
 
 export default function WorkPage() {
   const params = useParams();
@@ -17,6 +18,8 @@ export default function WorkPage() {
 
   const { work, loading } = useWorkData(id);
   const { derivativeWorks } = useDerivativeWorks(work?.id || null);
+  const transformedWorks = useWorksTransform(derivativeWorks);
+
   const {
     isDecrypting,
     handleDecrypt,
@@ -62,7 +65,7 @@ export default function WorkPage() {
           </div>
         </div>
 
-        <DerivativeWorksSection derivativeWorks={derivativeWorks} />
+        <DerivativeWorksSection derivativeWorks={transformedWorks} />
       </div>
     </div>
   );
