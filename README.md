@@ -1,3 +1,5 @@
+<img width="644" height="107" alt="image" src="https://github.com/user-attachments/assets/547b0cdf-b150-4a5a-9ce0-24a0af0a13e8" />
+
 # **LicenSea**
 
 [https://licen-sea-fe.vercel.app/](https://licen-sea-fe.vercel.app/)
