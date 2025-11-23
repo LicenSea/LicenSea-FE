@@ -135,7 +135,7 @@ export const useWorkDecrypt = (work: Work | null) => {
   const handleDecrypt = useCallback(async (): Promise<void> => {
     setIsDecrypting(true);
 
-    const MAX_RETRIES = 2; // 총 2번 시도 (최초 1번 + 재시도 1번)
+    const MAX_RETRIES = 3; // 총 2번 시도 (최초 1번 + 재시도 1번)
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {

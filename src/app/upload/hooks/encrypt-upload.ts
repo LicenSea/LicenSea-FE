@@ -94,13 +94,12 @@ export const handlePublish = (
   return tx;
 };
 
-const NUM_EPOCH = 1; // The number of epochs to store the file for
+const NUM_EPOCH = 53; // The number of epochs to store the file for
 
 export const services: WalrusService[] = [
   {
     id: "service1",
     name: "walrus.space",
-    // 기존 "/publisher1" -> 실제 HTTPS 주소로 변경
     publisherUrl: "https://publisher.walrus-testnet.walrus.space",
     aggregatorUrl: "https://aggregator.walrus-testnet.walrus.space",
   },
