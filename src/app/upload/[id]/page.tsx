@@ -291,7 +291,9 @@ export default function UploadPage() {
       if (!executeResult.success) {
         throw new Error(executeResult.error || "Transaction execution failed");
       }
-
+      if (executeResult.objectChanges) {
+        console.log("capId 위치 확인!!:", executeResult.objectChanges);
+      }
       // workObjectId, capId 추출
       const createdObjects = executeResult.objectChanges?.filter(
         (change: any) => change.type === "created"
@@ -299,8 +301,14 @@ export default function UploadPage() {
       const workObjectId = createdObjects?.find((c: any) =>
         c.objectType.endsWith("::work::Work")
       )?.objectId;
-      const capId = createdObjects?.find((c: any) =>
+      const capObjects = createdObjects?.filter((c: any) =>
         c.objectType.endsWith("::work::Cap")
+      );
+      if (capObjects) {
+        console.log("Created Cap objects:", capObjects);
+      }
+      const capId = capObjects?.find(
+        (c: any) => c.owner?.AddressOwner && c.owner.AddressOwner === c.sender
       )?.objectId;
 
       if (!workObjectId || !capId) {

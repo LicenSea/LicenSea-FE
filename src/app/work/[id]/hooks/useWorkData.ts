@@ -7,6 +7,7 @@ import type { Work } from "@/types/work";
 export const useWorkData = (id: string | undefined) => {
   const [work, setWork] = useState<Work | null>(null);
   const [loading, setLoading] = useState(true);
+  console.log("work", work);
 
   useEffect(() => {
     async function loadWork() {
