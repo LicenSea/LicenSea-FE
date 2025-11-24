@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       transactionBlock: signedTransaction.bytes,
       signature: signedTransaction.signature,
       options: {
-        showRawEffects: true,
+        showEffects: true,
         showObjectChanges: true,
         showEvents: true,
         showBalanceChanges: true,
@@ -151,6 +151,7 @@ export async function POST(request: NextRequest) {
 
         // 트랜잭션 effects 확인
         const effects = result.effects;
+        console.log(result);
         console.log(
           "[Pay Transaction] Effects:",
           JSON.stringify(effects, null, 2)
