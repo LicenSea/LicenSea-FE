@@ -4,6 +4,7 @@ import {
   saveWorkToIndexer,
   updateWorkBlobId,
   saveRevenueTransaction,
+  updateWorkRevoked,
 } from "@/lib/indexer/supabase-storage";
 
 const suiClient = new SuiClient({
@@ -23,6 +24,7 @@ export async function POST(request: NextRequest) {
         showRawEffects: true,
         showObjectChanges: true,
         showEvents: true,
+        showBalanceChanges: true,
       },
     });
 
@@ -304,6 +306,24 @@ export async function POST(request: NextRequest) {
     // Publish 트랜잭션
     if (transactionType === "publish") {
       await updateWorkBlobId(metadata.workId, metadata.blobId);
+    }
+
+    // Set revoke work 트랜잭션
+    if (transactionType === "set_revoke_work") {
+      try {
+        const workId = metadata.workId;
+        console.log(
+          "[Revoke Transaction] Processing revoke for workId:",
+          workId
+        );
+
+        await updateWorkRevoked(workId, true);
+
+        console.log("[Revoke Transaction] Successfully updated revoked status");
+      } catch (error) {
+        console.error("Error updating revoked status:", error);
+        // 에러가 발생해도 트랜잭션은 성공했으므로 에러를 throw하지 않음
+      }
     }
 
     return NextResponse.json({

@@ -455,3 +455,26 @@ export async function getWorksByCreator(creatorAddress: string) {
 
   return data || [];
 }
+
+/**
+ * Work의 revoked 상태 업데이트 (set_revoke_work 트랜잭션 후)
+ */
+export async function updateWorkRevoked(
+  workId: string,
+  revoked: boolean = true
+) {
+  if (!supabase) {
+    console.warn("Supabase not configured. Skipping revoked update.");
+    return;
+  }
+
+  const { error } = await supabase
+    .from("works")
+    .update({ revoked })
+    .eq("work_id", workId);
+
+  if (error) {
+    console.error("Error updating revoked status:", error);
+    throw error;
+  }
+}
